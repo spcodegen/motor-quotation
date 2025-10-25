@@ -3,6 +3,7 @@ import { Component } from '@angular/core';
 import { ButtonComponent } from '../../../ui/button/button.component';
 import { TableDropdownComponent } from '../../../common/table-dropdown/table-dropdown.component';
 import { BadgeComponent } from '../../../ui/badge/badge.component';
+import { RouterLink } from "@angular/router";
 
 interface Transaction {
   image: string;
@@ -19,9 +20,8 @@ interface Transaction {
   imports: [
     CommonModule,
     ButtonComponent,
-    TableDropdownComponent,
-    BadgeComponent,
-  ],
+    RouterLink
+],
   templateUrl: './basic-table-three.component.html',
   styles: ``
 })

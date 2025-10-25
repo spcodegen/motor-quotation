@@ -5,7 +5,6 @@ import { BasicTableThreeComponent } from '../../shared/components/tables/basic-t
   selector: 'app-vehicle-make',
   imports: [BasicTableThreeComponent],
   templateUrl: './vehicle-make.component.html',
-  styleUrl: './vehicle-make.component.css'
 })
 export class VehicleMakeComponent {
 
