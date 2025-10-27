@@ -18,7 +18,7 @@ import { VideosComponent } from './pages/ui-elements/videos/videos.component';
 import { SignInComponent } from './pages/auth-pages/sign-in/sign-in.component';
 import { SignUpComponent } from './pages/auth-pages/sign-up/sign-up.component';
 import { CalenderComponent } from './pages/calender/calender.component';
-import { VehicleMakeComponent } from './pages/vehicle-make/vehicle-make.component';
+
 import { VehicleModelComponent } from './pages/vehicle-model/vehicle-model.component';
 import { VehicleMakeListComponent } from './pages/vehicle-make/vehicle-make-list/vehicle-make-list.component';
 import { VehicleMakeFormComponent } from './pages/vehicle-make/vehicle-make-form/vehicle-make-form.component';
@@ -39,11 +39,6 @@ export const routes: Routes = [
         path:'calendar',
         component:CalenderComponent,
         title:'Angular Calender | TailAdmin - Angular Admin Dashboard Template'
-      },
-      {
-      path:'vehicle-make',
-      component:VehicleMakeComponent,
-      title:'Angular Admin Dashboard'
       },
       {
       path:'vehicle-make-list',

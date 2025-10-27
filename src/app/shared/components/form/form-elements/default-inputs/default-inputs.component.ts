@@ -6,6 +6,8 @@ import { SelectComponent } from '../../select/select.component';
 import { DatePickerComponent } from '../../date-picker/date-picker.component';
 import { ComponentCardComponent } from '../../../common/component-card/component-card.component';
 import { TimePickerComponent } from '../../time-picker/time-picker.component';
+import { TextAreaComponent } from "../../input/text-area.component";
+import { ButtonComponent } from "../../../ui/button/button.component";
 
 @Component({
   selector: 'app-default-inputs',
@@ -16,13 +18,15 @@ import { TimePickerComponent } from '../../time-picker/time-picker.component';
     InputFieldComponent,
     SelectComponent,
     DatePickerComponent,
-    TimePickerComponent,
-  ],
+    TimePickerComponent
+],
   templateUrl: './default-inputs.component.html',
   styles: ``
 })
 export class DefaultInputsComponent {
 
+  message = '';
+  
   showPassword = false;
   options = [
     { value: 'marketing', label: 'Marketing' },
