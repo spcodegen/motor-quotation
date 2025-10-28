@@ -51,6 +51,11 @@ export const routes: Routes = [
       title:'Angular Admin Dashboard'
       },
       {
+      path:'vehicle-make-form/edit/:id',
+      component:VehicleMakeFormComponent,
+      title:'Angular Admin Dashboard'
+      },
+      {
         path:'vehicle-model',
         component:VehicleModelComponent,
         title:'Angular Admin Dashboard'
