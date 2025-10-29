@@ -51,8 +51,8 @@
         id="description"
         name="description"
         [rows]="6"
-        [(ngModel)]="vehicleMake.description"
-        (ngModelChange)="onInputChange()"
+        [(value)]="vehicleMake.description"
+        (valueChange)="onInputChange()"
         placeholder="Enter vehicle make description"
       ></app-text-area>
     </div>

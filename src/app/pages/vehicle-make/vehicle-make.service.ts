@@ -45,7 +45,7 @@ export class VehicleMakeService {
   }
 
   // Delete vehicle make (soft delete)
-  deleteVehicleMake(id: number): Observable<void> {
+  deleteVehicleMake(id: string): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/vehicleMake/delete/${id}`)
       .pipe(
         catchError(this.handleError)

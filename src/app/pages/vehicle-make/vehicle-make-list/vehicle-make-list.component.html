@@ -68,10 +68,21 @@ class="mb-4 w-full max-w-60 rounded-2xl bg-gray-50 px-4 py-5 text-center dark:bg
                 </div>
             </td>
             <td class="px-4 py-4 text-gray-700 text-theme-sm dark:text-gray-400">
-              <div class="w-8 h-8">
-                  <img width="32" height="32" [src]="deleteIcon"  class="size-5" alt="brand" />
-                </div>
-            </td>
+            <button 
+              (click)="onDeleteVehicleMake(item.id, item.name)"
+              class="w-8 h-8 flex items-center justify-center hover:bg-red-50 rounded transition-colors group"
+              type="button"
+              [title]="'Delete ' + item.name"
+            >
+            <img 
+              width="20" 
+              height="20" 
+              [src]="deleteIcon" 
+              class="size-5 group-hover:opacity-80 transition-opacity" 
+              alt="Delete" 
+            />
+            </button>
+</td>
           </tr>
           }
         </tbody>

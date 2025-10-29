@@ -87,7 +87,7 @@ export class VehicleMakeFormComponent implements OnInit {
             console.log('Vehicle make updated:', response);
             // Optional: Redirect after delay
             setTimeout(() => {
-              this.router.navigate(['/vehicle-makes']);
+              this.router.navigate(['/vehicle-make-list']);
             }, 2000);
           },
           error: (error) => {
@@ -106,7 +106,7 @@ export class VehicleMakeFormComponent implements OnInit {
             console.log('Vehicle make created:', response);
             // Optional: Redirect after delay
             setTimeout(() => {
-              this.router.navigate(['/vehicle-makes']);
+              this.router.navigate(['/vehicle-make-list']);
             }, 2000);
           },
           error: (error) => {

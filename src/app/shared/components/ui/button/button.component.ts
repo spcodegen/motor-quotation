@@ -11,7 +11,9 @@ import { SafeHtmlPipe } from '../../../pipe/safe-html.pipe';
   templateUrl: './button.component.html',
   styles: ``,
   host: {
-
+    '[class]': 'allClasses',
+    '[attr.type]': 'type',
+    '[attr.disabled]': 'disabled || null'
   },
 })
 export class ButtonComponent {
@@ -22,6 +24,7 @@ export class ButtonComponent {
   @Input() className = '';
   @Input() startIcon?: string; // SVG or icon class, or use ng-content for more flexibility
   @Input() endIcon?: string;
+  @Input() type: 'button' | 'submit' | 'reset' = 'button'; // Add type input
 
   @Output() btnClick = new EventEmitter<Event>();
 
@@ -40,6 +43,7 @@ export class ButtonComponent {
   get disabledClasses(): string {
     return this.disabled ? 'cursor-not-allowed opacity-50' : '';
   }
+  
 
   onClick(event: Event) {
     if (!this.disabled) {
