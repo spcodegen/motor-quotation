@@ -67,6 +67,11 @@ export const routes: Routes = [
         title:'Motor Quotation | vehicle model form'
       },
       {
+        path:'vehicle-model-form/edit',
+        component: VehicleModelFormComponent,
+        title:'Motor Quotation | vehicle model form'
+      },
+      {
         path:'profile',
         component:ProfileComponent,
         title:'Angular Profile Dashboard | TailAdmin - Angular Admin Dashboard Template'

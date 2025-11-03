@@ -3,12 +3,6 @@ export interface VehicleMakeResponse {
   name: string;
   code: string;
   description: string;
-  createdBy: string | null;
-  createdDateTime: string;
-  modifiedBy: string | null;
-  modifiedDateTime: string;
-  status: string;
-  isDeleted: string;
 }
 
 export interface VehicleModel {
@@ -18,10 +12,4 @@ export interface VehicleModel {
   description: string;
   vehicleMakeId: string;
   vehicleMakeResponse: VehicleMakeResponse;
-  createdBy: string | null;
-  createdDateTime: string;
-  modifiedBy: string | null;
-  modifiedDateTime: string;
-  status: string;
-  isDeleted: string;
 }

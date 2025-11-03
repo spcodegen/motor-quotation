@@ -24,7 +24,7 @@ class="mb-4 w-full max-w-60 rounded-2xl bg-gray-50 px-4 py-5 text-center dark:bg
       <app-button
         size="sm"
         variant="outline"
-        [routerLink]="['/vehicle-make-form']"
+        [routerLink]="['/vehicle-model-form']"
       >
         <span class="hidden sm:inline">Create New</span>
         <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><image href="/images/icons/add.svg" width="24" height="24" /></svg>
@@ -65,6 +65,27 @@ class="mb-4 w-full max-w-60 rounded-2xl bg-gray-50 px-4 py-5 text-center dark:bg
             </td>
             <td class="px-4 py-4 text-gray-700 text-theme-sm dark:text-gray-400">
               {{ item.description }}
+            </td>
+            <!-- update the edit button -->
+            <td class="px-4 py-4 text-gray-700 text-theme-sm dark:text-gray-400">
+                <div class="w-8 h-8">
+                    <button (click)="handleEdit(item)"><img width="32" height="32" [src]="editIcon" class="size-5" alt="brand" /></button> 
+                </div>
+            </td>
+            <td class="px-4 py-4 text-gray-700 text-theme-sm dark:text-gray-400">
+              <button
+                class="w-8 h-8 flex items-center justify-center hover:bg-red-50 rounded transition-colors group"
+                type="button"
+                [title]="'Delete ' + item.name"
+              >
+                <img 
+                  width="20" 
+                  height="20" 
+                  [src]="deleteIcon" 
+                  class="size-5 group-hover:opacity-80 transition-opacity" 
+                  alt="Delete" 
+              />
+              </button>
             </td>
           </tr>
           }

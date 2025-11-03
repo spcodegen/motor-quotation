@@ -3,7 +3,7 @@ import { CommonModule, NgClass } from '@angular/common';
 import { BasicTableThreeComponent } from "../../../shared/components/tables/basic-tables/basic-table-three/basic-table-three.component";
 import { ButtonComponent } from "../../../shared/components/ui/button/button.component";
 import { HttpClient, HttpClientModule } from '@angular/common/http';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { VehicleModelService } from '../vehicle-model.service';
 import { VehicleModel } from '../vehicle-model.model';
 
@@ -28,8 +28,13 @@ export class VehicleModelListComponent {
   isLoading = false;
   errorMessage: string | null = null;
   searchTerm = '';
+  editIcon: string = '/images/icons/edit.svg';
+  deleteIcon: string = '/images/icons/delete.svg';
 
-  constructor(private vehicleModelService: VehicleModelService) {}
+  constructor(
+    private vehicleModelService: VehicleModelService,
+    private router:Router
+  ) {}
 
   ngOnInit() {
     this.fetchVehicleModels();
@@ -55,6 +60,12 @@ export class VehicleModelListComponent {
       });
   }
 
+  handleEdit(item: VehicleModel) {
+    console.log('Edit:', item);
+    // Navigate to edit form with the vehicle model ID
+    this.router.navigate(['/vehicle-model-form/edit',item]);
+  }
+
   get totalPages(): number {
     return Math.ceil(this.vehicleModelData.length / this.itemsPerPage);
   }
@@ -75,7 +86,19 @@ export class VehicleModelListComponent {
   }
 
   handleDelete(item: VehicleModel) {
-    console.log('Delete:', item);
+     if (confirm(`Are you sure you want to delete ${item.name}?`)) {
+      this.vehicleModelService.deleteVehicleModel(item.id)
+        .subscribe({
+          next: () => {
+            console.log('Vehicle model deleted:', item);
+            this.fetchVehicleModels(); // Refresh the list
+          },
+          error: (error) => {
+            console.error('Error deleting vehicle model:', error);
+            this.errorMessage = 'Failed to delete vehicle model.';
+          }
+        });
+    }
   }
 
 }

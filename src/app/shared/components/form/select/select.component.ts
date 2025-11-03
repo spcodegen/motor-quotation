@@ -8,7 +8,7 @@ export interface Option {
 
 @Component({
   selector: 'app-select',
-  imports:[CommonModule],
+  imports: [CommonModule],
   templateUrl: './select.component.html',
 })
 export class SelectComponent implements OnInit {
@@ -17,6 +17,7 @@ export class SelectComponent implements OnInit {
   @Input() className: string = '';
   @Input() defaultValue: string = '';
   @Input() value: string = '';
+  @Input() disabled: boolean = false;
 
   @Output() valueChange = new EventEmitter<string>();
 
@@ -27,6 +28,8 @@ export class SelectComponent implements OnInit {
   }
 
   onChange(event: Event) {
+    if (this.disabled) return; // Prevent changes when disabled
+    
     const value = (event.target as HTMLSelectElement).value;
     this.value = value;
     this.valueChange.emit(value);

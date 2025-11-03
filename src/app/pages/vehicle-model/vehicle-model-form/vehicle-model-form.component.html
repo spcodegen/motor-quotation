@@ -1,1 +1,114 @@
-<p>vehicle-model-form works!</p>
+<app-component-card [title]="isEditMode ? 'Edit Vehicle Model' : 'Create Vehicle Model'">
+  
+  <!-- Loading State for initial data load -->
+  <div *ngIf="isLoading" class="text-center py-8">
+    <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+    <div class="mt-2 text-gray-600 dark:text-gray-400">
+      {{ isEditMode ? 'Loading vehicle model details...' : 'Loading form...' }}
+    </div>
+  </div>
+
+  <!-- Error Message -->
+  <div *ngIf="errorMessage" class="mb-4 p-4 rounded-lg border border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
+    {{ errorMessage }}
+  </div>
+
+  <!-- Success Message -->
+  <div *ngIf="successMessage" class="mb-4 p-4 rounded-lg border border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400">
+    {{ successMessage }}
+  </div>
+
+  <!-- Form -->
+  <form *ngIf="!isLoading" (ngSubmit)="onSubmit()" class="space-y-6">
+
+    <!-- Vehicle Make Dropdown -->
+    <div>
+      <app-label>Vehicle Make *</app-label>
+      <app-select
+        [options]="vehicleMakeOptions"
+        placeholder="Select vehicle make"
+        [value]="selectedVehicleMakeId"
+        (valueChange)="handleSelectChange($event)"
+        className="dark:bg-dark-900"
+        [disabled]="isSubmitting"
+      ></app-select>
+      <div class="mt-1 text-xs text-gray-500 dark:text-gray-400" *ngIf="selectedVehicleMakeId">
+        Selected: {{ getSelectedVehicleMakeName() }}
+      </div>
+      <div class="mt-1 text-xs text-red-500" *ngIf="!selectedVehicleMakeId && isSubmitting">
+        Please select a vehicle make
+      </div>
+    </div>
+    
+    <!-- Name Field -->
+    <div>
+      <app-label for="name">Name *</app-label>
+      <app-input-field 
+        type="text" 
+        id="name"
+        name="name"
+        [(value)]="vehicleModel.name"
+        (valueChange)="onInputChange($event, 'name')"
+        placeholder="Enter vehicle model name"
+        required
+        [disabled]="isSubmitting"
+      />
+    </div>
+
+    <!-- Code Field -->
+    <div>
+      <app-label for="code">Code *</app-label>
+      <app-input-field 
+        type="text" 
+        id="code"
+        name="code"
+        [(value)]="vehicleModel.code"
+        (valueChange)="onInputChange($event, 'code')"
+        placeholder="Enter vehicle model code"
+        required
+        [disabled]="isSubmitting"
+      />
+    </div>
+
+    <!-- Description Field -->
+    <div>
+      <app-label for="description">Description</app-label>
+      <app-text-area
+        id="description"
+        name="description"
+        [rows]="4"
+        [(value)]="vehicleModel.description"
+        (valueChange)="onInputChange($event, 'description')"
+        placeholder="Enter vehicle model description"
+        [disabled]="isSubmitting"
+      ></app-text-area>
+    </div>
+
+    <!-- Form Actions -->
+    <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-white/10">
+      <app-button 
+        size="sm" 
+        variant="outline" 
+        type="button"
+        (btnClick)="onCancel()"
+        [disabled]="isSubmitting"
+      >
+        Cancel
+      </app-button>
+      
+      <app-button 
+        size="sm" 
+        variant="primary" 
+        type="submit"
+        [disabled]="isSubmitting"
+      >
+        <span *ngIf="isSubmitting">
+          {{ isEditMode ? 'Updating...' : 'Creating...' }}
+        </span>
+        <span *ngIf="!isSubmitting">
+          {{ isEditMode ? 'Update' : 'Create' }}
+        </span>
+      </app-button>
+    </div>
+  </form>
+</app-component-card>
