@@ -4,6 +4,7 @@ import { ButtonComponent } from "../../../shared/components/ui/button/button.com
 import { HttpClientModule } from '@angular/common/http';
 import { Router, RouterLink } from '@angular/router';
 import { VehicleMakeService } from '../vehicle-make.service';
+import { ConfirmPopupComponent } from '../../ui-elements/confirm-popup/confirm-popup.component';
 
 interface VehicleMake {
   id: string;
@@ -18,10 +19,12 @@ interface VehicleMake {
     ButtonComponent,
     RouterLink,
     HttpClientModule,
-    NgClass
+    NgClass,
+    ConfirmPopupComponent
   ],
   templateUrl: './vehicle-make-list.component.html',
 })
+
 export class VehicleMakeListComponent {
 
   vehicleMakeData: VehicleMake[] = [];
@@ -33,6 +36,10 @@ export class VehicleMakeListComponent {
   successMessage: string | null = null;
   editIcon: string = '/images/icons/edit.svg';
   deleteIcon: string = '/images/icons/delete.svg';
+
+  // Popup properties
+  showDeletePopup = false;
+  vehicleMakeToDelete: { id: string; name: string } | null = null;
 
   constructor(
     private vehicleMakeService: VehicleMakeService,
@@ -70,16 +77,26 @@ export class VehicleMakeListComponent {
     this.router.navigate(['/vehicle-make-form/edit', vehicleMakeId]);
   }
 
-  // Delete button click handler
+  // Delete button click handler - opens popup
   onDeleteVehicleMake(vehicleMakeId: string, vehicleMakeName: string): void {
     console.log('Delete button clicked for ID:', vehicleMakeId);
     
-    // Confirmation dialog
-    const isConfirmed = confirm(`Are you sure you want to delete "${vehicleMakeName}"? This action cannot be undone.`);
-    
-    if (isConfirmed) {
-      this.deleteVehicleMake(vehicleMakeId, vehicleMakeName);
+    // Store the vehicle make to delete and show popup
+    this.vehicleMakeToDelete = { id: vehicleMakeId, name: vehicleMakeName };
+    this.showDeletePopup = true;
+  }
+
+  // Confirm deletion from popup
+  onDeleteConfirm(): void {
+    if (this.vehicleMakeToDelete) {
+      this.deleteVehicleMake(this.vehicleMakeToDelete.id, this.vehicleMakeToDelete.name);
     }
+  }
+
+  // Cancel deletion from popup
+  onDeleteCancel(): void {
+    this.showDeletePopup = false;
+    this.vehicleMakeToDelete = null;
   }
 
   // Delete service call
@@ -94,6 +111,8 @@ export class VehicleMakeListComponent {
       next: () => {
         console.log('Vehicle make deleted successfully');
         this.isDeleting = false;
+        this.showDeletePopup = false;
+        this.vehicleMakeToDelete = null;
         this.successMessage = `Vehicle make "${name}" deleted successfully!`;
         
         // Reload the list to reflect changes
@@ -107,6 +126,7 @@ export class VehicleMakeListComponent {
       error: (error) => {
         console.error('Error deleting vehicle make:', error);
         this.isDeleting = false;
+        this.showDeletePopup = false;
         this.errorMessage = `Failed to delete vehicle make "${name}". Please try again.`;
         
         // Clear error message after 5 seconds
