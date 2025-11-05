@@ -34,6 +34,7 @@ interface SelectOption {
   styleUrl: './vehicle-model-form.component.css'
 })
 export class VehicleModelFormComponent implements OnInit {
+
   isEditMode = false;
   isLoading = false;
   isSubmitting = false;
@@ -43,8 +44,9 @@ export class VehicleModelFormComponent implements OnInit {
   // Vehicle Make dropdown
   vehicleMakeOptions: SelectOption[] = [];
   selectedVehicleMakeId: string = '';
+  vehicleMakes: any[] = [];
   
-  // Form model - initialize with empty strings to avoid undefined
+  // Form model
   vehicleModel: VehicleModel = {
     id: '',
     name: '',
@@ -67,27 +69,29 @@ export class VehicleModelFormComponent implements OnInit {
     this.vehicleModelId = this.route.snapshot.paramMap.get('id');
     this.isEditMode = !!this.vehicleModelId;
 
-    // Load vehicle makes first
-    this.loadVehicleMakes();
-
-    if (this.isEditMode) {
-      this.loadVehicleModelData(this.vehicleModelId!);
-    }
+    // Load vehicle makes first, then load vehicle model data
+    this.loadVehicleMakes().then(() => {
+      if (this.isEditMode && this.vehicleModelId) {
+        this.loadVehicleModelData(this.vehicleModelId);
+      }
+    });
   }
 
-  loadVehicleMakes() {
-    this.isLoading = true;
-    
-    this.vehicleMakeService.fetchVehicleMakes()
-      .subscribe({
-        next: (vehicleMakes) => {
+  async loadVehicleMakes(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.isLoading = true;
+      
+      this.vehicleMakeService.fetchVehicleMakes().subscribe({
+        next: (response: any) => {
+          this.vehicleMakes = response;
+          
           // Transform vehicle makes to dropdown options
-          this.vehicleMakeOptions = vehicleMakes.map(make => ({
+          this.vehicleMakeOptions = response.map((make: any) => ({
             value: make.id,
             label: `${make.name} (${make.code})`
           }));
           
-          // Add a default option
+          // Add a default option at the beginning
           this.vehicleMakeOptions.unshift({
             value: '',
             label: 'Select Vehicle Make'
@@ -95,41 +99,50 @@ export class VehicleModelFormComponent implements OnInit {
 
           console.log('Vehicle makes loaded:', this.vehicleMakeOptions);
           this.isLoading = false;
+          resolve();
         },
         error: (error) => {
           console.error('Error loading vehicle makes:', error);
           this.errorMessage = 'Failed to load vehicle makes. Please try again.';
           
-          // Set default options even if API fails
           this.vehicleMakeOptions = [
-            { value: '', label: 'Select Vehicle Make' },
-            { value: 'error', label: 'Failed to load makes' }
+            { value: '', label: 'Select Vehicle Make' }
           ];
           this.isLoading = false;
+          reject(error);
         }
       });
+    });
   }
 
   handleSelectChange(value: string) {
+    console.log('Dropdown changed to:', value);
     this.selectedVehicleMakeId = value;
     this.vehicleModel.vehicleMakeId = value;
-    console.log('Selected Vehicle Make ID:', value);
+    
+    if (value && this.errorMessage?.includes('Vehicle Make')) {
+      this.errorMessage = null;
+    }
   }
 
-  // Handle input changes for text fields
-  onInputChange(value: string | number, field: string) {
-    // Convert to string if it's a number
-    const stringValue = value.toString();
+  // Force set dropdown value
+  setDropdownValue(value: string) {
+    console.log('Setting dropdown value to:', value);
+    this.selectedVehicleMakeId = value;
     
-    // Update the specific field in the vehicleModel object
+    // Force change detection
+    setTimeout(() => {
+      console.log('Dropdown value after timeout:', this.selectedVehicleMakeId);
+    }, 0);
+  }
+
+  onInputChange(value: string | number, field: string) {
+    const stringValue = value.toString();
     (this.vehicleModel as any)[field] = stringValue;
     
-    // Clear any existing error messages when user starts typing
     if (this.errorMessage) {
       this.errorMessage = null;
     }
-    
-    console.log(`Field ${field} updated to:`, stringValue);
   }
 
   loadVehicleModelData(id: string) {
@@ -139,20 +152,35 @@ export class VehicleModelFormComponent implements OnInit {
     this.vehicleModelService.getVehicleModelById(id)
       .subscribe({
         next: (response) => {
+          console.log('API Response:', response);
+          
           this.vehicleModel = {
             ...response,
-            // Ensure all required fields have values
             name: response.name || '',
             code: response.code || '',
             description: response.description || '',
-            vehicleMakeId: response.vehicleMakeId || ''
+            vehicleMakeId: response.vehicleMakeResponse.id || ''
           };
 
-          // Set the selected vehicle make in dropdown for edit mode
-          this.selectedVehicleMakeId = response.vehicleMakeId;
-          
+          console.log('Vehicle Make ID from API:', response.vehicleMakeResponse.id);
+          console.log('Available options:', this.vehicleMakeOptions);
+
+          // Set the dropdown value - this is the key fix
+          if (response.vehicleMakeResponse) {
+            this.setDropdownValue(response.vehicleMakeResponse.id);
+            
+            // Double check if the value exists in options
+            const optionExists = this.vehicleMakeOptions.some(opt => opt.value === response.vehicleMakeResponse.id);
+            console.log('Option exists in dropdown:', optionExists);
+            
+            if (!optionExists) {
+              console.warn('Vehicle make ID not found in options:', response.vehicleMakeResponse.id);
+              this.errorMessage = `Warning: Associated vehicle make not found in available options.`;
+            }
+          }
+
           this.isLoading = false;
-          console.log('Vehicle model data loaded:', response);
+          console.log('Form data fully loaded');
         },
         error: (error) => {
           console.error('Error fetching vehicle model:', error);
@@ -163,22 +191,34 @@ export class VehicleModelFormComponent implements OnInit {
   }
 
   onSubmit() {
-    // Validate required fields
-    if (!this.vehicleModel.name || !this.vehicleModel.code || !this.selectedVehicleMakeId) {
-      this.errorMessage = 'Name, Code, and Vehicle Make are required fields.';
+    if (!this.vehicleModel.name?.trim()) {
+      this.errorMessage = 'Name is required.';
       return;
     }
 
-    // Ensure vehicleMakeId is set from dropdown
+    if (!this.vehicleModel.code?.trim()) {
+      this.errorMessage = 'Code is required.';
+      return;
+    }
+
+    if (!this.selectedVehicleMakeId) {
+      this.errorMessage = 'Vehicle Make is required.';
+      return;
+    }
+
     this.vehicleModel.vehicleMakeId = this.selectedVehicleMakeId;
 
-    // Prepare the data for API call
     const formData = {
       name: this.vehicleModel.name.trim(),
       code: this.vehicleModel.code.trim(),
-      description: this.vehicleModel.description.trim(),
+      description: this.vehicleModel.description?.trim() || '',
       vehicleMakeId: this.vehicleModel.vehicleMakeId
     };
+
+    // Include ID for update
+    if (this.isEditMode && this.vehicleModelId) {
+      (formData as any).id = this.vehicleModelId;
+    }
 
     console.log('Submitting form data:', formData);
 
@@ -187,15 +227,11 @@ export class VehicleModelFormComponent implements OnInit {
     this.successMessage = null;
 
     if (this.isEditMode && this.vehicleModelId) {
-      // Update existing vehicle model
-      this.vehicleModelService.updateVehicleModel(this.vehicleModelId, formData)
+      this.vehicleModelService.updateVehicleModel(formData)
         .subscribe({
           next: (response) => {
             this.isSubmitting = false;
             this.successMessage = 'Vehicle model updated successfully!';
-            console.log('Vehicle model updated:', response);
-            
-            // Redirect back to list after delay
             setTimeout(() => {
               this.router.navigate(['/vehicle-model-list']);
             }, 2000);
@@ -207,18 +243,12 @@ export class VehicleModelFormComponent implements OnInit {
           }
         });
     } else {
-      // Create new vehicle model
       this.vehicleModelService.createVehicleModel(formData)
         .subscribe({
           next: (response) => {
             this.isSubmitting = false;
             this.successMessage = 'Vehicle model created successfully!';
-            console.log('Vehicle model created:', response);
-            
-            // Reset form for new entry
             this.resetForm();
-            
-            // Option: Redirect to list after delay (uncomment if needed)
             setTimeout(() => {
               this.router.navigate(['/vehicle-model-list']);
             }, 2000);
@@ -232,7 +262,6 @@ export class VehicleModelFormComponent implements OnInit {
     }
   }
 
-  // Reset form after successful creation
   resetForm() {
     this.vehicleModel = {
       id: '',
@@ -249,13 +278,13 @@ export class VehicleModelFormComponent implements OnInit {
     this.router.navigate(['/vehicle-model-list']);
   }
 
-  // Helper method to get selected vehicle make name for display
   getSelectedVehicleMakeName(): string {
-    const selectedMake = this.vehicleMakeOptions.find(option => option.value === this.selectedVehicleMakeId);
-    return selectedMake ? selectedMake.label : 'Not selected';
+    if (!this.selectedVehicleMakeId) return 'Not selected';
+    
+    const selectedMake = this.vehicleMakes.find(make => make.id === this.selectedVehicleMakeId);
+    return selectedMake ? `${selectedMake.name} (${selectedMake.code})` : 'Unknown make';
   }
 
-  // Helper method to extract error message from API response
   private getErrorMessage(error: any): string {
     if (error.error?.message) {
       return error.error.message;
@@ -270,5 +299,23 @@ export class VehicleModelFormComponent implements OnInit {
       return 'A vehicle model with this code already exists.';
     }
     return error.message || 'An unexpected error occurred.';
+  }
+
+  retryLoadVehicleMakes() {
+    this.errorMessage = null;
+    this.loadVehicleMakes().then(() => {
+      if (this.isEditMode && this.vehicleModelId) {
+        this.loadVehicleModelData(this.vehicleModelId);
+      }
+    });
+  }
+
+  // Test method to manually set dropdown
+  testSetDropdown() {
+    if (this.vehicleMakeOptions.length > 1) {
+      const testValue = this.vehicleMakeOptions[1].value;
+      console.log('Testing dropdown set to:', testValue);
+      this.setDropdownValue(testValue);
+    }
   }
 }

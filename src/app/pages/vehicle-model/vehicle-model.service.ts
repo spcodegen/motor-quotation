@@ -25,8 +25,8 @@ export class VehicleModelService {
   }
 
   // Update existing vehicle model
-  updateVehicleModel(id: string, vehicleModel: Partial<VehicleModel>): Observable<VehicleModel> {
-    return this.http.put<VehicleModel>(`${this.apiUrl}/update/${id}`, vehicleModel);
+  updateVehicleModel(vehicleModel: Partial<VehicleModel>): Observable<VehicleModel> {
+    return this.http.put<VehicleModel>(`${this.apiUrl}/update`, vehicleModel);
   }
 
   deleteVehicleModel(id: string): Observable<void> {

@@ -10,12 +10,31 @@
 
   <!-- Error Message -->
   <div *ngIf="errorMessage" class="mb-4 p-4 rounded-lg border border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
-    {{ errorMessage }}
+    <div class="flex items-start">
+      <svg class="w-5 h-5 mt-0.5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+      </svg>
+      <div class="flex-1">
+        {{ errorMessage }}
+        <button 
+          *ngIf="errorMessage.includes('Failed to load vehicle makes')"
+          (click)="retryLoadVehicleMakes()"
+          class="mt-2 text-sm text-blue-600 hover:text-blue-800 underline"
+        >
+          Try Again
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- Success Message -->
   <div *ngIf="successMessage" class="mb-4 p-4 rounded-lg border border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400">
-    {{ successMessage }}
+    <div class="flex items-start">
+      <svg class="w-5 h-5 mt-0.5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+      </svg>
+      <span>{{ successMessage }}</span>
+    </div>
   </div>
 
   <!-- Form -->
@@ -24,19 +43,39 @@
     <!-- Vehicle Make Dropdown -->
     <div>
       <app-label>Vehicle Make *</app-label>
+      
+      <!-- Loading state for vehicle makes -->
+      <div *ngIf="isLoading && vehicleMakeOptions.length <= 1" class="py-2">
+        <div class="flex items-center space-x-2 text-sm text-gray-500">
+          <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+          <span>Loading vehicle makes...</span>
+        </div>
+      </div>
+
+      <!-- Vehicle Make Dropdown -->
       <app-select
+        *ngIf="!isLoading"
         [options]="vehicleMakeOptions"
-        placeholder="Select vehicle make"
+        placeholder="{{ vehicleMakeOptions.length <= 1 ? 'No vehicle makes available' : 'Select vehicle make' }}"
         [value]="selectedVehicleMakeId"
         (valueChange)="handleSelectChange($event)"
         className="dark:bg-dark-900"
-        [disabled]="isSubmitting"
+        [disabled]="isSubmitting || vehicleMakeOptions.length <= 1"
       ></app-select>
-      <div class="mt-1 text-xs text-gray-500 dark:text-gray-400" *ngIf="selectedVehicleMakeId">
-        Selected: {{ getSelectedVehicleMakeName() }}
+
+      <!-- Selected vehicle make display -->
+      <div class="mt-1 text-xs text-green-600 dark:text-green-400" *ngIf="selectedVehicleMakeId && !isLoading">
+        ✓ {{ getSelectedVehicleMakeName() }}
       </div>
+
+      <!-- Validation message -->
       <div class="mt-1 text-xs text-red-500" *ngIf="!selectedVehicleMakeId && isSubmitting">
-        Please select a vehicle make
+        ⚠ Please select a vehicle make
+      </div>
+
+      <!-- No vehicle makes available message -->
+      <div class="mt-1 text-xs text-yellow-600" *ngIf="!isLoading && vehicleMakeOptions.length <= 1">
+        ℹ No vehicle makes available. Please create vehicle makes first.
       </div>
     </div>
     
@@ -53,6 +92,9 @@
         required
         [disabled]="isSubmitting"
       />
+      <div class="mt-1 text-xs text-gray-500 dark:text-gray-400" *ngIf="vehicleModel.name">
+        Model name: {{ vehicleModel.name }}
+      </div>
     </div>
 
     <!-- Code Field -->
@@ -68,6 +110,9 @@
         required
         [disabled]="isSubmitting"
       />
+      <div class="mt-1 text-xs text-gray-500 dark:text-gray-400" *ngIf="vehicleModel.code">
+        Model code: {{ vehicleModel.code }}
+      </div>
     </div>
 
     <!-- Description Field -->
@@ -82,10 +127,14 @@
         placeholder="Enter vehicle model description"
         [disabled]="isSubmitting"
       ></app-text-area>
+      <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+        {{ vehicleModel.description ? vehicleModel.description.length + ' characters' : 'Optional description' }}
+      </div>
     </div>
 
     <!-- Form Actions -->
     <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-white/10">
+      <!-- Cancel button -->
       <app-button 
         size="sm" 
         variant="outline" 
@@ -95,20 +144,36 @@
       >
         Cancel
       </app-button>
-      
+      <!-- Update/Create button -->
       <app-button 
         size="sm" 
         variant="primary" 
         type="submit"
-        [disabled]="isSubmitting"
+        [disabled]="isSubmitting || vehicleMakeOptions.length <= 1"
       >
-        <span *ngIf="isSubmitting">
+        <span *ngIf="isSubmitting" class="flex items-center">
+          <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
           {{ isEditMode ? 'Updating...' : 'Creating...' }}
         </span>
         <span *ngIf="!isSubmitting">
-          {{ isEditMode ? 'Update' : 'Create' }}
+          {{ isEditMode ? 'Update Vehicle Model' : 'Create Vehicle Model' }}
         </span>
       </app-button>
     </div>
+
+    <!-- Form Help Text -->
+    <!-- <div class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+      <div class="flex items-start">
+        <svg class="w-4 h-4 mt-0.5 mr-2 text-blue-600 dark:text-blue-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+        </svg>
+        <div class="text-sm text-blue-700 dark:text-blue-300">
+          <strong>Note:</strong> All fields marked with * are required. Make sure to select a vehicle make from the dropdown before submitting.
+        </div>
+      </div>
+    </div> -->
   </form>
 </app-component-card>
