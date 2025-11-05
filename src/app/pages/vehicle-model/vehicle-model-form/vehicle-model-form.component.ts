@@ -75,6 +75,7 @@ export class VehicleModelFormComponent implements OnInit {
         this.loadVehicleModelData(this.vehicleModelId);
       }
     });
+
   }
 
   async loadVehicleMakes(): Promise<void> {
@@ -129,7 +130,7 @@ export class VehicleModelFormComponent implements OnInit {
   setDropdownValue(value: string) {
     console.log('Setting dropdown value to:', value);
     this.selectedVehicleMakeId = value;
-    
+
     // Force change detection
     setTimeout(() => {
       console.log('Dropdown value after timeout:', this.selectedVehicleMakeId);
@@ -191,6 +192,11 @@ export class VehicleModelFormComponent implements OnInit {
   }
 
   onSubmit() {
+    if (!this.selectedVehicleMakeId) {
+      this.errorMessage = 'Vehicle Make is required.';
+      return;
+    }
+
     if (!this.vehicleModel.name?.trim()) {
       this.errorMessage = 'Name is required.';
       return;
@@ -198,11 +204,6 @@ export class VehicleModelFormComponent implements OnInit {
 
     if (!this.vehicleModel.code?.trim()) {
       this.errorMessage = 'Code is required.';
-      return;
-    }
-
-    if (!this.selectedVehicleMakeId) {
-      this.errorMessage = 'Vehicle Make is required.';
       return;
     }
 
@@ -232,6 +233,7 @@ export class VehicleModelFormComponent implements OnInit {
           next: (response) => {
             this.isSubmitting = false;
             this.successMessage = 'Vehicle model updated successfully!';
+            this.resetForm();
             setTimeout(() => {
               this.router.navigate(['/vehicle-model-list']);
             }, 2000);

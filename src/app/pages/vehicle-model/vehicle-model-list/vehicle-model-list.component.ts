@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { CommonModule, NgClass } from '@angular/common';
+import { CommonModule, NgClass, NgIf } from '@angular/common';
 import { BasicTableThreeComponent } from "../../../shared/components/tables/basic-tables/basic-table-three/basic-table-three.component";
 import { ButtonComponent } from "../../../shared/components/ui/button/button.component";
 import { HttpClient, HttpClientModule } from '@angular/common/http';
@@ -14,8 +14,9 @@ import { VehicleModel } from '../vehicle-model.model';
     ButtonComponent,
     RouterLink,
     HttpClientModule,
-    NgClass
-  ],
+    NgClass,
+    NgIf
+],
   templateUrl: './vehicle-model-list.component.html',
   styleUrl: './vehicle-model-list.component.css'
 })
@@ -26,7 +27,10 @@ export class VehicleModelListComponent {
   currentPage = 1;
   itemsPerPage = 5;
   isLoading = false;
+  isDeleting = false;
+  deletingId: string | null = null;
   errorMessage: string | null = null;
+  successMessage: string | null = null;
   searchTerm = '';
   editIcon: string = '/images/icons/edit.svg';
   deleteIcon: string = '/images/icons/delete.svg';
@@ -85,17 +89,41 @@ export class VehicleModelListComponent {
     console.log('View More:', item);
   }
 
-  handleDelete(item: VehicleModel) {
-     if (confirm(`Are you sure you want to delete ${item.name}?`)) {
+   handleDelete(item: VehicleModel) {
+    console.log("ok");
+    
+    if (confirm(`Are you sure you want to delete "${item.name}"? This action cannot be undone.`)) {
+      this.isDeleting = true;
+      this.deletingId = item.id;
+      this.errorMessage = null;
+      this.successMessage = null;
+
       this.vehicleModelService.deleteVehicleModel(item.id)
         .subscribe({
           next: () => {
-            console.log('Vehicle model deleted:', item);
-            this.fetchVehicleModels(); // Refresh the list
+            console.log('Vehicle model deleted successfully:', item.name);
+            this.successMessage = `Vehicle model "${item.name}" deleted successfully.`;
+            this.isDeleting = false;
+            this.deletingId = null;
+            
+            // Refresh the list after successful deletion
+            this.fetchVehicleModels();
+            
+            // Reset success message after 3 seconds
+            setTimeout(() => {
+              this.successMessage = null;
+            }, 3000);
           },
           error: (error) => {
             console.error('Error deleting vehicle model:', error);
-            this.errorMessage = 'Failed to delete vehicle model.';
+            this.errorMessage = `Failed to delete "${item.name}". Please try again.`;
+            this.isDeleting = false;
+            this.deletingId = null;
+            
+            // Reset error message after 5 seconds
+            setTimeout(() => {
+              this.errorMessage = null;
+            }, 5000);
           }
         });
     }
