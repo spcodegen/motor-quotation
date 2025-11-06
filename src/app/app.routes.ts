@@ -23,6 +23,8 @@ import { VehicleMakeListComponent } from './pages/vehicle-make/vehicle-make-list
 import { VehicleMakeFormComponent } from './pages/vehicle-make/vehicle-make-form/vehicle-make-form.component';
 import { VehicleModelListComponent } from './pages/vehicle-model/vehicle-model-list/vehicle-model-list.component';
 import { VehicleModelFormComponent } from './pages/vehicle-model/vehicle-model-form/vehicle-model-form.component';
+import { MotorQuotationListComponent } from './pages/motor-quotation/motor-quotation-list/motor-quotation-list.component';
+import { MotorQuotationFormComponent } from './pages/motor-quotation/motor-quotation-form/motor-quotation-form.component';
 
 export const routes: Routes = [
   {
@@ -51,11 +53,6 @@ export const routes: Routes = [
       component:VehicleMakeFormComponent,
       title:'Motor Quotation | vehicle make form edit'
       },
-      // {
-      //   path:'vehicle-model',
-      //   component:VehicleModelComponent,
-      //   title:'Motor Quotation | vehicle model'
-      // },
       {
         path:'vehicle-model-list',
         component: VehicleModelListComponent,
@@ -70,6 +67,16 @@ export const routes: Routes = [
         path:'vehicle-model-form/edit',
         component: VehicleModelFormComponent,
         title:'Motor Quotation | vehicle model form'
+      },
+      {
+        path:'motor-quotation-list',
+        component: MotorQuotationListComponent,
+        title:'Motor Quotation | List'
+      },
+      {
+        path:'motor-quotation-form',
+        component: MotorQuotationFormComponent,
+        title:'Motor Quotation | Form'
       },
       {
         path:'profile',

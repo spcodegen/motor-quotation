@@ -7,7 +7,7 @@ import { ConfirmPopupComponent } from "./pages/ui-elements/confirm-popup/confirm
   standalone: true,
   imports: [
     RouterModule,
-    ConfirmPopupComponent
+    // ConfirmPopupComponent
 ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',

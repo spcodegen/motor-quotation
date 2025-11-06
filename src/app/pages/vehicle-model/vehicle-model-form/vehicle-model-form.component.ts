@@ -89,14 +89,15 @@ export class VehicleModelFormComponent implements OnInit {
           // Transform vehicle makes to dropdown options
           this.vehicleMakeOptions = response.map((make: any) => ({
             value: make.id,
-            label: `${make.name} (${make.code})`
+            label: `${make.name}`
+            // label: `${make.name} (${make.code})`
           }));
           
           // Add a default option at the beginning
-          this.vehicleMakeOptions.unshift({
-            value: '',
-            label: 'Select Vehicle Make'
-          });
+          // this.vehicleMakeOptions.unshift({
+          //   value: '',
+          //   label: 'Select Vehicle Make'
+          // });
 
           console.log('Vehicle makes loaded:', this.vehicleMakeOptions);
           this.isLoading = false;
