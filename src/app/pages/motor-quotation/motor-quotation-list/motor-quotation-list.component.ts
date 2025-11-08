@@ -20,6 +20,8 @@ export class MotorQuotationListComponent {
   errorMessage: string | null = null;
 
   constructor(private http: HttpClient) {}
+  
+  
 
   ngOnInit() {
     this.fetchVehicleMakes();

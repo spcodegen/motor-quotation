@@ -37,6 +37,8 @@ export class MotorQuotationFormComponent {
   timeValue = '';
   cardNumber = '';
 
+  
+
   handleModelChange(model: string): void {
     this.selectedModel = model;
     console.log('Selected vehicle model type:', model);
