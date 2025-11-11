@@ -5,30 +5,20 @@
       <app-label>Vehicle Category</app-label>
         <app-select
           [options]="categoryOptions"
-          placeholder="Select Make"
-          [value]="selectedMake"
-          (valueChange)="handeleMakeChange($event)"
+          placeholder="Select Category"
+          [value]="selectedCategory"
+          (valueChange)="handleCategoryChange($event)"
           className="dark:bg-dark-900"
           ></app-select>  
-    </div>
-    <div>
-      <app-label>Select Vehicle Product</app-label>
-        <app-select
-          [options]="modelOptions"
-          placeholder="Select Model" 
-          [value]="selectedModel"
-          (valueChange)="handleModelChange($event)"
-          className="dark:bg-dark-900"
-        ></app-select>
     </div>
     <div class="flex flex-col md:flex-row gap-4 items-end">
         <div class="w-full md:flex-1">
             <app-label>Vehicle Make</app-label>
                 <app-select
-                    [options]="categoryOptions"
+                    [options]="makeOptions"
                     placeholder="Select Make"
                     [value]="selectedMake"
-                    (valueChange)="handeleMakeChange($event)"
+                    (valueChange)="handleMakeChange($event)"
                     className="dark:bg-dark-900"
                 ></app-select>
         </div>
@@ -45,6 +35,16 @@
     </div>
     <div class="flex flex-col md:flex-row gap-4 items-end">
       <div class="w-full md:flex-1">
+        <app-label>Vehicle Chassis</app-label>
+                <app-select
+                [options]="chassisOptions"
+                placeholder="Select Chassis" 
+                [value]="selectedChassis"
+                (valueChange)="handleChassisChange($event)"
+                className="dark:bg-dark-900"
+            ></app-select>
+      </div>
+      <div class="w-full md:flex-1">
         <app-label>Select Year Of Manufacture</app-label>
           <app-select
             [options]="yearOptions"
@@ -53,15 +53,6 @@
             (valueChange)="handleYearChange($event)"
             className="dark:bg-dark-900"
           ></app-select>
-      </div>
-      <div class="w-full md:flex-1">
-          <app-button
-        size="sm"
-        variant="outline"
-        [routerLink]=""
-      >
-        <span class="hidden sm:inline">VIEW</span>
-      </app-button>
       </div>
     </div>
     <div>
@@ -73,6 +64,26 @@
         (valueChange)="product?.sumInsured"
       />
     </div>
+
+     <!-- <div>
+      <app-label>Select Vehicle Product</app-label>
+        <app-select
+          [options]="modelOptions"
+          placeholder="Select Model" 
+          [value]="selectedModel"
+          (valueChange)="handleModelChange($event)"
+          className="dark:bg-dark-900"
+        ></app-select>
+    </div> -->
+    <!-- <div>
+      <app-label for="input">Basic Premium</app-label>
+      <app-input-field 
+        type="number" 
+        id="input" 
+        [value]="basicPremium"
+        (valueChange)="product?.sumInsured"
+      />
+    </div> -->
 
     <!-- Product Covers Section -->
     <div *ngIf="product" class="mt-8">

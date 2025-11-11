@@ -5,8 +5,7 @@ import { LabelComponent } from "../../../shared/components/form/label/label.comp
 import { InputFieldComponent } from "../../../shared/components/form/input/input-field.component";
 import { SelectComponent } from "../../../shared/components/form/select/select.component";
 import { ComponentCardComponent } from "../../../shared/components/common/component-card/component-card.component";
-import { ButtonComponent } from "../../../shared/components/ui/button/button.component";
-import { RouterLink } from "@angular/router";
+import { HttpClient } from '@angular/common/http';
 
 export interface Cover {
   coverName: string;
@@ -28,46 +27,40 @@ export interface Option {
   label: string;
 }
 
+
 @Component({
   selector: 'app-motor-quotation-form',
   imports: [
     CommonModule,
-    LabelComponent, 
-    InputFieldComponent, 
-    SelectComponent, 
-    ComponentCardComponent, 
-    ButtonComponent, 
-    RouterLink
-  ],
+    LabelComponent,
+    InputFieldComponent,
+    SelectComponent,
+    ComponentCardComponent
+],
   templateUrl: './motor-quotation-form.component.html',
   styleUrl: './motor-quotation-form.component.css'
 })
 export class MotorQuotationFormComponent implements OnInit {
+  // Options for dropdowns
+  categoryOptions: Option[] = [];
+  makeOptions: Option[] = [];
+  modelOptions:Option[] = [];
+  chassisOptions:Option[] = [];
+  yearOptions: Option[] = [];
+  // Selected values
+  selectedCategory:string = '';
+  selectedMake:string = '';
+  selectedModel:string = '';
+  selectedChassis:string = '';
+  selectedYear:string = '';
 
   message = '';
-  selectedYear: string = '';
-  selectedModel: string = '';
-  selectedMake: string = '';
-  // Generate years from 1950 to current year + 1
-  yearOptions: any[] = this.generateYearOptions();
-  
   showPassword = false;
-  
   selectedOption = '';
   dateValue: any;
   timeValue = '';
   cardNumber = '';
 
-  categoryOptions = [
-    { value: 'car', label: 'Car' },
-    { value: 'van', label: 'Van' },
-    { value: 'bus', label: 'Bus' },
-  ];
-  modelOptions: any[] = [
-    { label: 'Private', value: 'private' },
-    { label: 'Hiring', value: 'hiring' },
-    { label: 'Rent', value: 'rent' }
-  ];
   productOption: any[] = [
     { label: 'Private', value: 'private' },
     { label: 'Hiring', value: 'hiring' },
@@ -77,13 +70,156 @@ export class MotorQuotationFormComponent implements OnInit {
   // Product data
   product: Product | null = null;
   sumInsured: number = 5000000;
+  basicPremium: number = 50000;
 
-  constructor() {}
+  constructor(private http: HttpClient) {}
 
   ngOnInit(): void {
+    this.fetchVehicleCategories();
     this.loadProductData();
   }
+  // Fetch initial vehicle categories
+  fetchVehicleCategories() {
+    this.http.get<string[]>('http://172.20.11.162:8001/Quotation/VehicleCategory')
+    .subscribe({
+      next:(data)=>{
+        this.categoryOptions = data.map(item=>({
+          label:item,
+          value:item
+        }));
+      },
+      error: (error) => {
+          console.error('Error fetching vehicle categories:', error);
+          // Optional: Add user-friendly error handling
+        }
+    });
+    
+  }
+  // Fetch vehicle makes based on selected category
+  fetchVehicleMakes(category: string) {
+    const url = `http://172.20.11.162:8001/Quotation/VehicleMake?category=${encodeURIComponent(category)}`;
 
+    this.http.get<string[]>(url).subscribe({
+      next:(data)=>{
+        this.makeOptions = data.map(item=>({
+          label:item,
+          value:item
+        }));
+      },
+      error: (error) => {
+          console.error('Error fetching vehicle makes:', error);
+          this.makeOptions = [];
+      }
+    });
+  }
+  // Fetch vehicle models based on selected category and make
+  fetchVehicleModels(category:string,make:string){
+    const url = `http://172.20.11.162:8001/Quotation/VehicleModel?category=${encodeURIComponent(category)}&make=${encodeURIComponent(make)}`;
+  
+    this.http.get<string[]>(url)
+    .subscribe({
+      next:(data)=>{
+        this.modelOptions=data.map(item=>({
+          label:item,
+          value:item
+        }));
+      },
+      error: (error) => {
+          console.error('Error fetching vehicle models:', error);
+          this.modelOptions = [];
+        }
+    });
+  }
+  // Fetch vehicle chassis based on selected category, make and model
+  fetchVehicleChassis(category:string,make:string,model:string){
+    const url = `http://172.20.11.162:8001/Quotation/VehicleChassis?category=${encodeURIComponent(category)}&make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}`;
+    
+    this.http.get<string[]>(url)
+    .subscribe({
+      next:(data)=>{
+        this.chassisOptions = data.map(item =>({
+          label:item,
+          value:item
+        }));
+      },
+      error: (error) => {
+          console.error('Error fetching vehicle chassis:', error);
+          this.chassisOptions = [];
+        }
+    });
+  }
+  // Fetch vehicle years based on selected category, make, model and chassis
+  fetchVehicleYears(category:string, make:string, model:string, chassis:string){
+    const url = `http://172.20.11.162:8001/Quotation/VehicleYear?category=${encodeURIComponent(category)}&chassis=${encodeURIComponent(chassis)}&make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}`;
+  
+    this.http.get<string[]>(url)
+    .subscribe({
+      next:(data) => {
+        this.yearOptions = data.map(item =>({
+          label:item,
+          value:item
+        }))
+      },
+      error: (error) => {
+          console.error('Error fetching vehicle years:', error);
+          this.yearOptions = [];
+        }
+    });
+  }
+  // Handle category selection change
+  handleCategoryChange(category: string) {
+    this.selectedCategory = category;    
+    this.selectedMake = '';
+    this.selectedModel = '';
+    this.selectedChassis = '';
+    this.selectedYear = '';
+    this.makeOptions = [];
+    this.modelOptions = [];
+    this.chassisOptions = [];
+    this.yearOptions = [];
+    if (category) {
+      this.fetchVehicleMakes(category);
+    }
+  }
+  // Handle make selection change
+  handleMakeChange(make:string){
+    this.selectedMake = make;
+    this.selectedModel = '';
+    this.selectedChassis = '';
+    this.modelOptions = [];
+    this.chassisOptions = [];
+
+    if (make && this.selectedCategory) {
+      this.fetchVehicleModels(this.selectedCategory, make);
+    }
+  }
+  // Handle model selection change
+  handleModelChange(model:string){
+    this.selectedModel=model;
+    this.selectedChassis = '';
+    this.chassisOptions = [];
+
+    if (model && this.selectedCategory && this.selectedMake) {
+      this.fetchVehicleChassis(this.selectedCategory, this.selectedMake, model)
+    }
+  }
+  // Handle chassis selection change
+  handleChassisChange(chassis:string){
+    this.selectedChassis = chassis;
+    this.selectedYear = '';
+    this.yearOptions = [];
+
+    if (chassis && this.selectedCategory && this.selectedMake && this.selectedModel) {
+      this.fetchVehicleYears(this.selectedCategory, this.selectedMake, this.selectedModel, chassis);
+    }
+  }
+  // Handle year selection change
+  handleYearChange(year:string){
+    this.selectedYear = year;
+  }
+
+
+  ///////////////////////////////////////////////////
   loadProductData(): void {
     // Simulate getting product data from service
     this.product = this.getRentCarProduct();
@@ -172,10 +308,11 @@ export class MotorQuotationFormComponent implements OnInit {
     return [{ label: cover.values.toString(), value: cover.values.toString() }];
   }
 
-  handleModelChange(model: string): void {
-    this.selectedModel = model;
-    console.log('Selected vehicle model type:', model);
-    // Add your business logic here
+  getDefaultValue(cover: Cover): any {
+    if (Array.isArray(cover.values)) {
+      return cover.values[0];
+    }
+    return cover.values;
   }
 
   handeleMakeChange(model: string) {
@@ -196,12 +333,6 @@ export class MotorQuotationFormComponent implements OnInit {
     }
     
     return years;
-  }
-
-  handleYearChange(year: string): void {
-    this.selectedYear = year;
-    console.log('Selected YOM:', year);
-    // Add your logic here
   }
 
   handleSelectChange(value: string) {
@@ -239,13 +370,6 @@ export class MotorQuotationFormComponent implements OnInit {
     }
     
     return cover.selectedValue || this.getDefaultValue(cover);
-  }
-
-  getDefaultValue(cover: Cover): any {
-    if (Array.isArray(cover.values)) {
-      return cover.values[0];
-    }
-    return cover.values;
   }
 
   isCoverEditable(cover: Cover): boolean {
