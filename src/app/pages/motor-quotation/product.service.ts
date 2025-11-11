@@ -46,7 +46,25 @@ export class ProductService {
           coverType: "dropdownComponent",
           coverValueCanEdit: "yes",
           values: ['0%', '60%']
-        }
+        },
+        {
+          coverName: "P.A.B.3",
+          coverType: "inputComponent",
+          coverValueCanEdit: "yes",
+          values: 500000
+        },
+        {
+          coverName: "P.A.B.4",
+          coverType: "inputComponent",
+          coverValueCanEdit: "yes",
+          values: 500000
+        },
+        {
+          coverName: "P.A.B.5",
+          coverType: "inputComponent",
+          coverValueCanEdit: "yes",
+          values: 500000
+        },
       ]
     };
   }
