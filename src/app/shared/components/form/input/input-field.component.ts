@@ -19,7 +19,6 @@ import { Component, Input, Output, EventEmitter } from '@angular/core';
         [ngClass]="inputClasses"
         (input)="onInput($event)"
       />
-
       @if (hint) {
       <p class="mt-1.5 text-xs"
         [ngClass]="{
@@ -44,7 +43,7 @@ export class InputFieldComponent {
   @Input() max?: string;
   @Input() step?: number;
   @Input() disabled: boolean = false;
-  @Input() success: boolean = false;
+  @Input() success: boolean = false; 
   @Input() error: boolean = false;
   @Input() hint?: string;
   @Input() className: string = '';

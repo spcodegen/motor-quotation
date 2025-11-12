@@ -1,71 +1,48 @@
 // services/product.service.ts
 import { Injectable } from '@angular/core';
-import { Product, Cover } from './product.model';
+import { environment } from '../../../environments/environment';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ProductService {
-  getRentCarProduct(): Product {
-    return {
-      productName: "Rent Car",
-      sumInsured: 5000000,
-      covers: [
-        {
-          coverName: "Basic Premium",
-          coverType: "textComponent",
-          coverValueCanEdit: "no",
-          values: 1.38
-        },
-        {
-          coverName: "Business Promotion Discount",
-          coverType: "dropdownComponent",
-          coverValueCanEdit: "yes",
-          values: ['0%', '10%', '20%', '30%', '40%']
-        },
-        {
-          coverName: "P.A.B.1",
-          coverType: "inputComponent",
-          coverValueCanEdit: "yes",
-          values: 100000
-        },
-        {
-          coverName: "W C I-Dri/Cle/Attd",
-          coverType: "dropdownComponent",
-          coverValueCanEdit: "yes",
-          values: ['yes', 'no']
-        },
-        {
-          coverName: "P.A.B.2",
-          coverType: "inputComponent",
-          coverValueCanEdit: "yes",
-          values: 100000
-        },
-        {
-          coverName: "Driving Tution Cover",
-          coverType: "dropdownComponent",
-          coverValueCanEdit: "yes",
-          values: ['0%', '60%']
-        },
-        {
-          coverName: "P.A.B.3",
-          coverType: "inputComponent",
-          coverValueCanEdit: "yes",
-          values: 500000
-        },
-        {
-          coverName: "P.A.B.4",
-          coverType: "inputComponent",
-          coverValueCanEdit: "yes",
-          values: 500000
-        },
-        {
-          coverName: "P.A.B.5",
-          coverType: "inputComponent",
-          coverValueCanEdit: "yes",
-          values: 500000
-        },
-      ]
-    };
+  private apiUrl = environment.apiUrl;
+
+  constructor(private http: HttpClient){}
+
+  // Fetch vehicle categories
+  getVehicleCategories(): Observable<string[]> {
+    return this.http.get<string[]>(`${this.apiUrl}/Quotation/VehicleCategory`);
+  }
+  // Fetch vehicle makes based on category
+  getVehicleMakes(category: string): Observable<string[]> {
+    const url = `${this.apiUrl}/Quotation/VehicleMake?category=${encodeURIComponent(category)}`;
+    return this.http.get<string[]>(url);
+  }
+
+  // Fetch vehicle models based on category and make
+  getVehicleModels(category: string, make: string): Observable<string[]> {
+    const url = `${this.apiUrl}/Quotation/VehicleModel?category=${encodeURIComponent(category)}&make=${encodeURIComponent(make)}`;
+    return this.http.get<string[]>(url);
+  }
+
+  // Fetch vehicle chassis based on category, make and model
+  getVehicleChassis(category: string, make: string, model: string): Observable<string[]> {
+    const url = `${this.apiUrl}/Quotation/VehicleChassis?category=${encodeURIComponent(category)}&make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}`;
+    return this.http.get<string[]>(url);
+  }
+
+  // Fetch vehicle years based on category, make, model and chassis
+  getVehicleYears(category: string, make: string, model: string, chassis: string): Observable<string[]> {
+    const url = `${this.apiUrl}/Quotation/VehicleYear?category=${encodeURIComponent(category)}&chassis=${encodeURIComponent(chassis)}&make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}`;
+    return this.http.get<string[]>(url);
+  }
+
+  // Fetch vehicle value based on all selected parameters
+  getVehicleValue(category: string, chassis: string, make: string, model: string,  year: string): Observable<string> {
+    const url = `${this.apiUrl}/Quotation/VehicleValue?category=${encodeURIComponent(category)}&chassis=${encodeURIComponent(chassis)}&make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}&year=${encodeURIComponent(year)}`;
+    return this.http.get(url, { responseType: 'text' });
   }
 }

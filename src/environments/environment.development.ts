@@ -1,0 +1,4 @@
+export const environment = {
+    production: true,
+    apiUrl: 'http://172.20.11.162:8001'
+};

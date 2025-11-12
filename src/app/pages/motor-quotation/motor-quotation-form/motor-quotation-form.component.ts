@@ -6,6 +6,8 @@ import { InputFieldComponent } from "../../../shared/components/form/input/input
 import { SelectComponent } from "../../../shared/components/form/select/select.component";
 import { ComponentCardComponent } from "../../../shared/components/common/component-card/component-card.component";
 import { HttpClient } from '@angular/common/http';
+import { ProductService } from '../product.service';
+
 
 export interface Cover {
   coverName: string;
@@ -53,6 +55,8 @@ export class MotorQuotationFormComponent implements OnInit {
   selectedModel:string = '';
   selectedChassis:string = '';
   selectedYear:string = '';
+  sumInsured: string = '';
+  
 
   message = '';
   showPassword = false;
@@ -60,19 +64,17 @@ export class MotorQuotationFormComponent implements OnInit {
   dateValue: any;
   timeValue = '';
   cardNumber = '';
-
   productOption: any[] = [
     { label: 'Private', value: 'private' },
     { label: 'Hiring', value: 'hiring' },
     { label: 'Rent', value: 'rent' }
   ];
-
   // Product data
   product: Product | null = null;
-  sumInsured: number = 5000000;
+  sumInsuredNew: number = 5000000;
   basicPremium: number = 50000;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private productService: ProductService) {}
 
   ngOnInit(): void {
     this.fetchVehicleCategories();
@@ -80,92 +82,97 @@ export class MotorQuotationFormComponent implements OnInit {
   }
   // Fetch initial vehicle categories
   fetchVehicleCategories() {
-    this.http.get<string[]>('http://172.20.11.162:8001/Quotation/VehicleCategory')
-    .subscribe({
-      next:(data)=>{
-        this.categoryOptions = data.map(item=>({
-          label:item,
-          value:item
+    this.productService.getVehicleCategories().subscribe({
+      next: (data) => {
+        this.categoryOptions = data.map(item => ({
+          label: item,
+          value: item
         }));
       },
       error: (error) => {
-          console.error('Error fetching vehicle categories:', error);
-          // Optional: Add user-friendly error handling
-        }
-    });
-    
-  }
-  // Fetch vehicle makes based on selected category
-  fetchVehicleMakes(category: string) {
-    const url = `http://172.20.11.162:8001/Quotation/VehicleMake?category=${encodeURIComponent(category)}`;
-
-    this.http.get<string[]>(url).subscribe({
-      next:(data)=>{
-        this.makeOptions = data.map(item=>({
-          label:item,
-          value:item
-        }));
-      },
-      error: (error) => {
-          console.error('Error fetching vehicle makes:', error);
-          this.makeOptions = [];
+        console.error('Error fetching vehicle categories:', error);
       }
     });
   }
+
+  // Fetch vehicle makes based on selected category
+  fetchVehicleMakes(category: string) {
+    this.productService.getVehicleMakes(category).subscribe({
+      next: (data) => {
+        this.makeOptions = data.map(item => ({
+          label: item,
+          value: item
+        }));
+      },
+      error: (error) => {
+        console.error('Error fetching vehicle makes:', error);
+        this.makeOptions = [];
+      }
+    });
+  }
+
   // Fetch vehicle models based on selected category and make
-  fetchVehicleModels(category:string,make:string){
-    const url = `http://172.20.11.162:8001/Quotation/VehicleModel?category=${encodeURIComponent(category)}&make=${encodeURIComponent(make)}`;
-  
-    this.http.get<string[]>(url)
-    .subscribe({
-      next:(data)=>{
-        this.modelOptions=data.map(item=>({
-          label:item,
-          value:item
+  fetchVehicleModels(category: string, make: string) {
+    this.productService.getVehicleModels(category, make).subscribe({
+      next: (data) => {
+        this.modelOptions = data.map(item => ({
+          label: item,
+          value: item
         }));
       },
       error: (error) => {
-          console.error('Error fetching vehicle models:', error);
-          this.modelOptions = [];
-        }
+        console.error('Error fetching vehicle models:', error);
+        this.modelOptions = [];
+      }
     });
   }
+
   // Fetch vehicle chassis based on selected category, make and model
-  fetchVehicleChassis(category:string,make:string,model:string){
-    const url = `http://172.20.11.162:8001/Quotation/VehicleChassis?category=${encodeURIComponent(category)}&make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}`;
-    
-    this.http.get<string[]>(url)
-    .subscribe({
-      next:(data)=>{
-        this.chassisOptions = data.map(item =>({
-          label:item,
-          value:item
+  fetchVehicleChassis(category: string, make: string, model: string) {
+    this.productService.getVehicleChassis(category, make, model).subscribe({
+      next: (data) => {
+        this.chassisOptions = data.map(item => ({
+          label: item,
+          value: item
         }));
       },
       error: (error) => {
-          console.error('Error fetching vehicle chassis:', error);
-          this.chassisOptions = [];
-        }
+        console.error('Error fetching vehicle chassis:', error);
+        this.chassisOptions = [];
+      }
     });
   }
+
   // Fetch vehicle years based on selected category, make, model and chassis
-  fetchVehicleYears(category:string, make:string, model:string, chassis:string){
-    const url = `http://172.20.11.162:8001/Quotation/VehicleYear?category=${encodeURIComponent(category)}&chassis=${encodeURIComponent(chassis)}&make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}`;
-  
-    this.http.get<string[]>(url)
-    .subscribe({
-      next:(data) => {
-        this.yearOptions = data.map(item =>({
-          label:item,
-          value:item
-        }))
+  fetchVehicleYears(category: string, make: string, model: string, chassis: string) {
+    this.productService.getVehicleYears(category, make, model, chassis).subscribe({
+      next: (data) => {
+        this.yearOptions = data.map(item => ({
+          label: item,
+          value: item
+        }));
       },
       error: (error) => {
-          console.error('Error fetching vehicle years:', error);
-          this.yearOptions = [];
-        }
+        console.error('Error fetching vehicle years:', error);
+        this.yearOptions = [];
+      }
     });
   }
+
+  // Fetch vehicle value based on all selected parameters
+  fetchVehicleValue(category: string, chassis: string, make: string, model: string,  year: string) {
+    this.productService.getVehicleValue(category, chassis, make, model,  year).subscribe({
+      next: (data) => {
+        console.log('Vehicle value response:', data);
+        this.sumInsured = data.trim();
+      },
+      error: (error) => {
+        console.error('Error fetching vehicle value:', error);
+        this.sumInsured = '';
+      }
+    });
+  }
+
   // Handle category selection change
   handleCategoryChange(category: string) {
     this.selectedCategory = category;    
@@ -173,6 +180,7 @@ export class MotorQuotationFormComponent implements OnInit {
     this.selectedModel = '';
     this.selectedChassis = '';
     this.selectedYear = '';
+    this.sumInsured = '';
     this.makeOptions = [];
     this.modelOptions = [];
     this.chassisOptions = [];
@@ -186,6 +194,8 @@ export class MotorQuotationFormComponent implements OnInit {
     this.selectedMake = make;
     this.selectedModel = '';
     this.selectedChassis = '';
+    this.selectedYear = '';
+    this.sumInsured = '';
     this.modelOptions = [];
     this.chassisOptions = [];
 
@@ -197,7 +207,10 @@ export class MotorQuotationFormComponent implements OnInit {
   handleModelChange(model:string){
     this.selectedModel=model;
     this.selectedChassis = '';
+    this.selectedYear = '';
+    this.sumInsured = '';
     this.chassisOptions = [];
+    this.yearOptions = [];
 
     if (model && this.selectedCategory && this.selectedMake) {
       this.fetchVehicleChassis(this.selectedCategory, this.selectedMake, model)
@@ -207,6 +220,7 @@ export class MotorQuotationFormComponent implements OnInit {
   handleChassisChange(chassis:string){
     this.selectedChassis = chassis;
     this.selectedYear = '';
+    this.sumInsured = '';
     this.yearOptions = [];
 
     if (chassis && this.selectedCategory && this.selectedMake && this.selectedModel) {
@@ -216,6 +230,11 @@ export class MotorQuotationFormComponent implements OnInit {
   // Handle year selection change
   handleYearChange(year:string){
     this.selectedYear = year;
+    this.sumInsured = '';
+
+    if (year && this.selectedCategory && this.selectedMake && this.selectedModel && this.selectedChassis) {
+      this.fetchVehicleValue(this.selectedCategory, this.selectedChassis, this.selectedMake, this.selectedModel, year);
+    }
   }
 
 
@@ -363,7 +382,7 @@ export class MotorQuotationFormComponent implements OnInit {
   getCoverDisplayValue(cover: Cover): string {
     if (cover.coverType === 'textComponent') {
       if (cover.coverName === 'Basic Premium') {
-        const premium = (cover.values * this.sumInsured) / 100;
+        const premium = (cover.values * this.sumInsuredNew) / 100;
         return `${cover.values}% (${premium.toLocaleString('en-US', { style: 'currency', currency: 'USD' })})`;
       }
       return cover.values.toString();
@@ -381,7 +400,7 @@ export class MotorQuotationFormComponent implements OnInit {
     
     return this.product.covers.reduce((total: number, cover: Cover) => {
       if (cover.coverName === 'Basic Premium') {
-        return total + (cover.values * this.sumInsured) / 100;
+        return total + (cover.values * this.sumInsuredNew) / 100;
       }
       // Add calculations for other covers as needed
       return total;
@@ -389,7 +408,7 @@ export class MotorQuotationFormComponent implements OnInit {
   }
 
   onSumInsuredChange(value: string): void {
-    this.sumInsured = Number(value) || 0;
+    this.sumInsuredNew = Number(value) || 0;
     this.calculateTotalPremium();
   }
 }

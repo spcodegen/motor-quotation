@@ -58,10 +58,11 @@
     <div>
       <app-label for="input">Sum Insured</app-label>
       <app-input-field 
-        type="number" 
+        type="text" 
         id="input" 
-        [value]="sumInsured.toString()"
-        (valueChange)="product?.sumInsured"
+        [value]="sumInsured"
+        (valueChange)="sumInsured"
+        [disabled]="true"
       />
     </div>
 
