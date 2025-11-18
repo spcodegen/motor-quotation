@@ -8,6 +8,7 @@ import { ComponentCardComponent } from "../../../shared/components/common/compon
 import { HttpClient } from '@angular/common/http';
 import { ProductService } from '../product.service';
 import { VehicleType } from '../vehicle-type.model';
+import { VehicleProduct } from '../vehicle-product.model';
 
 
 export interface Cover {
@@ -195,6 +196,22 @@ export class MotorQuotationFormComponent implements OnInit {
     });
   }
 
+   // Fetch vehicle products by vehicle type ID
+  fetchVehicleProducts(vehicleTypeId: string) {
+    this.productService.getVehicleProductsByType(vehicleTypeId).subscribe({
+      next: (data: VehicleProduct[]) => {
+        this.vehicleProductOptions = data.map(item => ({
+          label: item.name,
+          value: item.id
+        }));
+      },
+      error: (error) => {
+        console.error('Error fetching vehicle products:', error);
+        this.vehicleProductOptions = [];
+      }
+    });
+  }
+
   // Handle category selection change
   handleCategoryChange(category: string) {
     this.selectedCategory = category;    
@@ -261,13 +278,22 @@ export class MotorQuotationFormComponent implements OnInit {
   // Handle vehicle type selection change
   handleVehicleTypeChange(vehicleTypeId: string) {
     this.selectedVehicleType = vehicleTypeId;
-    // You can add logic here if vehicle type selection affects other dropdowns
-    // For example, you might want to reset other dropdowns or fetch data based on vehicle type
+    this.selectedVehicleProduct = '';
+    this.vehicleProductOptions = [];
+
     console.log('Selected vehicle type:', vehicleTypeId);
+
+    if (vehicleTypeId) {
+      this.fetchVehicleProducts(vehicleTypeId);
+    }
   }
 
-  handleVehicleProductChange($event: string) {
-    throw new Error('Method not implemented.');
+  // Handle vehicle product selection change
+  handleVehicleProductChange(productId: string) {
+    this.selectedVehicleProduct = productId;
+    // You can add additional logic here when product is selected
+    // For example: update rates, calculate premium, etc.
+    console.log('Selected vehicle product:', productId);
   }
 
 

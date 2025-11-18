@@ -4,6 +4,7 @@ import { environment } from '../../../environments/environment';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { VehicleType } from './vehicle-type.model';
+import { VehicleProduct } from './vehicle-product.model';
 
 @Injectable({
   providedIn: 'root'
@@ -19,10 +20,16 @@ export class ProductService {
     return this.http.get<VehicleType[]>(`${this.quotationApiUrl}/vehicleType/getAllActive`);
   }
 
+  // Fetch vehicle products by vehicle type ID
+  getVehicleProductsByType(vehicleTypeId: string): Observable<VehicleProduct[]> {
+    return this.http.get<VehicleProduct[]>(`${environment.quotationApiUrl}/product/getByVehicleTypeId/${vehicleTypeId}`);
+  }
+
   // Fetch vehicle categories
   getVehicleCategories(): Observable<string[]> {
     return this.http.get<string[]>(`${this.apiUrl}/Quotation/VehicleCategory`);
   }
+
   // Fetch vehicle makes based on category
   getVehicleMakes(category: string): Observable<string[]> {
     const url = `${this.apiUrl}/Quotation/VehicleMake?category=${encodeURIComponent(category)}`;
