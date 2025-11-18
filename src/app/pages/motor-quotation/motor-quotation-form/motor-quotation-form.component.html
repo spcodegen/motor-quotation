@@ -65,17 +65,26 @@
         [disabled]="true"
       />
     </div>
-
-     <!-- <div>
+    <div>
+      <app-label>Vehicle Type</app-label>
+        <app-select
+          [options]="vehicleTypeOptions"
+          placeholder="Select Type"
+          [value]="selectedVehicleType"
+          (valueChange)="handleVehicleTypeChange($event)"
+          className="dark:bg-dark-900"
+          ></app-select>  
+    </div>
+     <div>
       <app-label>Select Vehicle Product</app-label>
         <app-select
-          [options]="modelOptions"
+          [options]="vehicleProductOptions"
           placeholder="Select Model" 
-          [value]="selectedModel"
-          (valueChange)="handleModelChange($event)"
+          [value]="selectedVehicleProduct"
+          (valueChange)="handleVehicleProductChange($event)"
           className="dark:bg-dark-900"
         ></app-select>
-    </div> -->
+    </div>
     <!-- <div>
       <app-label for="input">Basic Premium</app-label>
       <app-input-field 

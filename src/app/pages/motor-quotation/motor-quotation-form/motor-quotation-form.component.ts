@@ -7,6 +7,7 @@ import { SelectComponent } from "../../../shared/components/form/select/select.c
 import { ComponentCardComponent } from "../../../shared/components/common/component-card/component-card.component";
 import { HttpClient } from '@angular/common/http';
 import { ProductService } from '../product.service';
+import { VehicleType } from '../vehicle-type.model';
 
 
 export interface Cover {
@@ -43,12 +44,15 @@ export interface Option {
   styleUrl: './motor-quotation-form.component.css'
 })
 export class MotorQuotationFormComponent implements OnInit {
+
   // Options for dropdowns
   categoryOptions: Option[] = [];
   makeOptions: Option[] = [];
   modelOptions:Option[] = [];
   chassisOptions:Option[] = [];
   yearOptions: Option[] = [];
+  vehicleTypeOptions: Option[] = [];
+  vehicleProductOptions: Option[] = [];
   // Selected values
   selectedCategory:string = '';
   selectedMake:string = '';
@@ -56,7 +60,8 @@ export class MotorQuotationFormComponent implements OnInit {
   selectedChassis:string = '';
   selectedYear:string = '';
   sumInsured: string = '';
-  
+  selectedVehicleType: string = '';
+  selectedVehicleProduct: string = '';
 
   message = '';
   showPassword = false;
@@ -79,7 +84,9 @@ export class MotorQuotationFormComponent implements OnInit {
   ngOnInit(): void {
     this.fetchVehicleCategories();
     this.loadProductData();
+    this.fetchVehicleTypes();
   }
+
   // Fetch initial vehicle categories
   fetchVehicleCategories() {
     this.productService.getVehicleCategories().subscribe({
@@ -173,6 +180,21 @@ export class MotorQuotationFormComponent implements OnInit {
     });
   }
 
+  // Fetch vehicle types
+  fetchVehicleTypes() {
+    this.productService.getVehicleTypes().subscribe({
+      next: (data: VehicleType[]) => {
+        this.vehicleTypeOptions = data.map(item => ({
+          label: item.name,  // Use 'name' for display
+          value: item.id     // Use 'id' for value (or use item.name if you prefer)
+        }));
+      },
+      error: (error) => {
+        console.error('Error fetching vehicle types:', error);
+      }
+    });
+  }
+
   // Handle category selection change
   handleCategoryChange(category: string) {
     this.selectedCategory = category;    
@@ -235,6 +257,17 @@ export class MotorQuotationFormComponent implements OnInit {
     if (year && this.selectedCategory && this.selectedMake && this.selectedModel && this.selectedChassis) {
       this.fetchVehicleValue(this.selectedCategory, this.selectedChassis, this.selectedMake, this.selectedModel, year);
     }
+  }
+  // Handle vehicle type selection change
+  handleVehicleTypeChange(vehicleTypeId: string) {
+    this.selectedVehicleType = vehicleTypeId;
+    // You can add logic here if vehicle type selection affects other dropdowns
+    // For example, you might want to reset other dropdowns or fetch data based on vehicle type
+    console.log('Selected vehicle type:', vehicleTypeId);
+  }
+
+  handleVehicleProductChange($event: string) {
+    throw new Error('Method not implemented.');
   }
 
 

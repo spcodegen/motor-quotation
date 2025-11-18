@@ -3,14 +3,21 @@ import { Injectable } from '@angular/core';
 import { environment } from '../../../environments/environment';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { VehicleType } from './vehicle-type.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ProductService {
   private apiUrl = environment.apiUrl;
+  private quotationApiUrl = environment.quotationApiUrl;
 
   constructor(private http: HttpClient){}
+
+  // Fetch all active vehicle types
+  getVehicleTypes(): Observable<VehicleType[]> {
+    return this.http.get<VehicleType[]>(`${this.quotationApiUrl}/vehicleType/getAllActive`);
+  }
 
   // Fetch vehicle categories
   getVehicleCategories(): Observable<string[]> {
