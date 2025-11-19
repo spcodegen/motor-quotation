@@ -7,8 +7,9 @@ import { SelectComponent } from "../../../shared/components/form/select/select.c
 import { ComponentCardComponent } from "../../../shared/components/common/component-card/component-card.component";
 import { HttpClient } from '@angular/common/http';
 import { ProductService } from '../product.service';
-import { VehicleType } from '../vehicle-type.model';
-import { VehicleProduct } from '../vehicle-product.model';
+import { VehicleType } from '../motor-quotation-model/vehicle-type.model';
+import { VehicleProduct } from '../motor-quotation-model/vehicle-product.model';
+import { Discount, RateResponse } from '../motor-quotation-model/rate-response.model';
 
 
 export interface Cover {
@@ -29,6 +30,11 @@ export interface Product {
 export interface Option {
   value: string;
   label: string;
+}
+
+interface DiscountOption {
+  label: string;
+  value: number;
 }
 
 
@@ -63,6 +69,10 @@ export class MotorQuotationFormComponent implements OnInit {
   sumInsured: string = '';
   selectedVehicleType: string = '';
   selectedVehicleProduct: string = '';
+
+  // Discounts data
+  discounts: Discount[] = [];
+  selectedDiscountValues: { [key: string]: number } = {};
 
   message = '';
   showPassword = false;
@@ -212,6 +222,22 @@ export class MotorQuotationFormComponent implements OnInit {
     });
   }
 
+  // Fetch all active discounts
+  fetchAllActiveDiscounts() {
+    this.productService.getAllActiveDiscounts().subscribe({
+      next: (data: Discount[]) => {
+        this.discounts = data;
+        console.log(data);
+        // Initialize default values for discounts
+        this.initializeDiscountValues();
+      },
+      error: (error) => {
+        console.error('Error fetching discounts:', error);
+        this.discounts = [];
+      }
+    });
+  }
+
   // Handle category selection change
   handleCategoryChange(category: string) {
     this.selectedCategory = category;    
@@ -294,7 +320,91 @@ export class MotorQuotationFormComponent implements OnInit {
     // You can add additional logic here when product is selected
     // For example: update rates, calculate premium, etc.
     console.log('Selected vehicle product:', productId);
+     if (productId) {
+      // Fetch discounts when product is selected
+      this.fetchAllActiveDiscounts();
+    } else {
+      this.discounts = [];
+    }
   }
+
+  initializeDiscountValues() {
+  this.selectedDiscountValues = {};
+  
+  if (!this.discounts || this.discounts.length === 0) {
+    console.warn('No discounts available to initialize');
+    return;
+  }
+  
+  this.discounts.forEach(discount => {
+    // Check if discount object is valid
+    if (!discount || !discount.id) {
+      console.warn('Invalid discount object:', discount);
+      return;
+    }
+    
+    // Check if rateResponseList exists and has items
+    if (discount.rateResponseList && discount.rateResponseList.length > 0) {
+      // Filter out invalid rate responses
+      const validRates = discount.rateResponseList.filter(rate => 
+        rate && typeof rate.value === 'number'
+      );
+      
+      if (validRates.length > 0) {
+        if (discount.inputControlType === 'DROPDOWN') {
+          // Use the first valid rate value
+          this.selectedDiscountValues[discount.id] = validRates[0].value;
+          console.log(`Set DROPDOWN ${discount.name}: ${validRates[0].value}`);
+        } else if (discount.inputControlType === 'INPUT_FIELD') {
+          // For input fields, set to 0 or the first value
+          this.selectedDiscountValues[discount.id] = 0;
+          console.log(`Set INPUT_FIELD ${discount.name}: 0`);
+        } else {
+          // Fallback for unknown input types
+          this.selectedDiscountValues[discount.id] = 0;
+          console.warn(`Unknown inputControlType for ${discount.name}: ${discount.inputControlType}`);
+        }
+      } else {
+        // No valid rate responses
+        this.selectedDiscountValues[discount.id] = 0;
+        console.warn(`No valid rate responses for ${discount.name}`);
+      }
+    } else {
+      // No rate responses available
+      this.selectedDiscountValues[discount.id] = 0;
+      console.log(`No rate responses for ${discount.name}, set to 0`);
+    }
+  });
+  
+  console.log('Initialized discount values:', this.selectedDiscountValues);
+}
+
+  // Get discount options for dropdown - Convert numbers to strings for app-select
+  getDiscountOptions(rateResponseList: RateResponse[]): Option[] {
+    return rateResponseList.map(rate => ({
+      label: `${rate.value}%`,
+      value: rate.value.toString() // Convert number to string
+    }));
+  }
+
+  // Get current discount value
+  getDiscountValue(discountId: string): number {
+    return this.selectedDiscountValues[discountId] || 0;
+  }
+
+  // Handle discount input field change
+  onDiscountInputChange(discountId: string, event: any) {
+    const value = parseFloat(event.target.value) || 0;
+    this.selectedDiscountValues[discountId] = value;
+    console.log(`Discount ${discountId} value changed to:`, value);
+  }
+
+  // Handle discount dropdown change - Convert string back to number
+  onDiscountSelectChange(discountId: string, value: string) {
+    this.selectedDiscountValues[discountId] = parseFloat(value) || 0;
+    console.log(`Discount ${discountId} value changed to:`, this.selectedDiscountValues[discountId]);
+  }
+
 
 
   ///////////////////////////////////////////////////
