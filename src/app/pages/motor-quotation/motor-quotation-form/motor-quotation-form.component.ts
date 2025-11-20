@@ -94,8 +94,8 @@ export class MotorQuotationFormComponent implements OnInit {
 
   ngOnInit(): void {
     this.fetchVehicleCategories();
-    this.loadProductData();
     this.fetchVehicleTypes();
+    this.loadProductData();
   }
 
   // Fetch initial vehicle categories
@@ -222,18 +222,24 @@ export class MotorQuotationFormComponent implements OnInit {
     });
   }
 
-  // Fetch all active discounts
+  // Updated fetchAllActiveDiscounts to ensure proper timing
   fetchAllActiveDiscounts() {
+    console.log('📡 Fetching all active discounts...');
     this.productService.getAllActiveDiscounts().subscribe({
       next: (data: Discount[]) => {
+        console.log('✅ Discounts API response:', data);
         this.discounts = data;
-        console.log(data);
-        // Initialize default values for discounts
-        this.initializeDiscountValues();
+        
+        // Initialize values after a small delay to ensure data is set
+        setTimeout(() => {
+          console.log('⏰ Initializing discount values after timeout...');
+          this.initializeDiscountValues();
+        }, 100);
       },
       error: (error) => {
-        console.error('Error fetching discounts:', error);
+        console.error('❌ Error fetching discounts:', error);
         this.discounts = [];
+        this.selectedDiscountValues = {};
       }
     });
   }
@@ -325,59 +331,74 @@ export class MotorQuotationFormComponent implements OnInit {
       this.fetchAllActiveDiscounts();
     } else {
       this.discounts = [];
+      this.selectedDiscountValues = {};
     }
   }
 
+  // Updated initializeDiscountValues with proper debugging
   initializeDiscountValues() {
-  this.selectedDiscountValues = {};
-  
-  if (!this.discounts || this.discounts.length === 0) {
-    console.warn('No discounts available to initialize');
-    return;
-  }
-  
-  this.discounts.forEach(discount => {
-    // Check if discount object is valid
-    if (!discount || !discount.id) {
-      console.warn('Invalid discount object:', discount);
+    console.log('🚀 START: initializeDiscountValues');
+    console.log('Discounts received:', this.discounts);
+    
+    this.selectedDiscountValues = {};
+    
+    if (!this.discounts || this.discounts.length === 0) {
+      console.warn('❌ No discounts available to initialize');
       return;
     }
     
-    // Check if rateResponseList exists and has items
-    if (discount.rateResponseList && discount.rateResponseList.length > 0) {
-      // Filter out invalid rate responses
-      const validRates = discount.rateResponseList.filter(rate => 
-        rate && typeof rate.value === 'number'
-      );
+    this.discounts.forEach((discount, index) => {
+      console.log(`\n📋 Processing discount ${index + 1}:`, discount.name);
+      console.log('Discount ID:', discount.id);
+      console.log('Input Control Type:', discount.inputControlType);
+      console.log('Rate Response List:', discount.rateResponseList);
       
-      if (validRates.length > 0) {
-        if (discount.inputControlType === 'DROPDOWN') {
-          // Use the first valid rate value
-          this.selectedDiscountValues[discount.id] = validRates[0].value;
-          console.log(`Set DROPDOWN ${discount.name}: ${validRates[0].value}`);
-        } else if (discount.inputControlType === 'INPUT_FIELD') {
-          // For input fields, set to 0 or the first value
-          this.selectedDiscountValues[discount.id] = 0;
-          console.log(`Set INPUT_FIELD ${discount.name}: 0`);
+      // Check if discount object is valid
+      if (!discount || !discount.id) {
+        console.warn('❌ Invalid discount object:', discount);
+        return;
+      }
+      
+      // Check if rateResponseList exists and has items
+      if (discount.rateResponseList && discount.rateResponseList.length > 0) {
+        // Filter out invalid rate responses
+        const validRates = discount.rateResponseList.filter(rate => 
+          rate && typeof rate.value === 'number'
+        );
+        
+        console.log('✅ Valid rates found:', validRates.length);
+        
+        if (validRates.length > 0) {
+          if (discount.inputControlType === 'DROPDOWN') {
+            // Use the first valid rate value
+            const selectedValue = validRates[0].value;
+            this.selectedDiscountValues[discount.id] = selectedValue;
+            console.log(`🎯 Set DROPDOWN "${discount.name}" to:`, selectedValue);
+          } else if (discount.inputControlType === 'INPUT_FIELD') {
+            // For input fields, set to the first value (not 0)
+            const selectedValue = validRates[0].value;
+            this.selectedDiscountValues[discount.id] = selectedValue;
+            console.log(`🎯 Set INPUT_FIELD "${discount.name}" to:`, selectedValue);
+          } else {
+            // Fallback for unknown input types
+            this.selectedDiscountValues[discount.id] = 0;
+            console.warn(`❓ Unknown inputControlType for "${discount.name}": ${discount.inputControlType}`);
+          }
         } else {
-          // Fallback for unknown input types
+          // No valid rate responses
           this.selectedDiscountValues[discount.id] = 0;
-          console.warn(`Unknown inputControlType for ${discount.name}: ${discount.inputControlType}`);
+          console.warn(`⚠️ No valid rate responses for "${discount.name}"`);
         }
       } else {
-        // No valid rate responses
+        // No rate responses available
         this.selectedDiscountValues[discount.id] = 0;
-        console.warn(`No valid rate responses for ${discount.name}`);
+        console.log(`ℹ️ No rate responses for "${discount.name}", set to 0`);
       }
-    } else {
-      // No rate responses available
-      this.selectedDiscountValues[discount.id] = 0;
-      console.log(`No rate responses for ${discount.name}, set to 0`);
-    }
-  });
-  
-  console.log('Initialized discount values:', this.selectedDiscountValues);
-}
+    });
+    
+    console.log('🏁 FINAL selectedDiscountValues:', this.selectedDiscountValues);
+    
+  }
 
   // Get discount options for dropdown - Convert numbers to strings for app-select
   getDiscountOptions(rateResponseList: RateResponse[]): Option[] {
