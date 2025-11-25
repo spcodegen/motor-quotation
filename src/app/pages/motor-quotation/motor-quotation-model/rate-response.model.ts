@@ -4,8 +4,7 @@ export interface RateResponse {
   value: number;
   orderNo: number;
   rateType: string;
-  discountId: string;
-  loadingId: any;
+  adjustmentId: string;
   coverId: any;
   createdBy: string;
   createdDateTime: number;
@@ -15,11 +14,13 @@ export interface RateResponse {
   isDeleted: string;
 }
 
-export interface Discount {
+export interface Adjustment {
   id: string;
   name: string;
   code: string;
   description: string;
+  orderNo: number;
+  adjustmentType: 'DISCOUNT' | 'LOADING';
   inputControlType: 'INPUT_FIELD' | 'DROPDOWN';
   rateResponseList: RateResponse[];
   createdBy: string;

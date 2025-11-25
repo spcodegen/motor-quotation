@@ -1,5 +1,5 @@
 // motor-quotation-form.component.ts
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { LabelComponent } from "../../../shared/components/form/label/label.component";
 import { InputFieldComponent } from "../../../shared/components/form/input/input-field.component";
@@ -9,7 +9,8 @@ import { HttpClient } from '@angular/common/http';
 import { ProductService } from '../product.service';
 import { VehicleType } from '../motor-quotation-model/vehicle-type.model';
 import { VehicleProduct } from '../motor-quotation-model/vehicle-product.model';
-import { Discount, RateResponse } from '../motor-quotation-model/rate-response.model';
+import { Adjustment, RateResponse } from '../motor-quotation-model/rate-response.model';
+// import { Discount, RateResponse } from '../motor-quotation-model/rate-response.model';
 
 
 export interface Cover {
@@ -70,9 +71,9 @@ export class MotorQuotationFormComponent implements OnInit {
   selectedVehicleType: string = '';
   selectedVehicleProduct: string = '';
 
-  // Discounts data
-  discounts: Discount[] = [];
-  selectedDiscountValues: { [key: string]: number } = {};
+  // Adjustments data (replaces discounts)
+  adjustments: Adjustment[] = [];
+  selectedAdjustmentValues: { [key: string]: number } = {};
 
   message = '';
   showPassword = false;
@@ -90,12 +91,11 @@ export class MotorQuotationFormComponent implements OnInit {
   sumInsuredNew: number = 5000000;
   basicPremium: number = 50000;
 
-  constructor(private http: HttpClient, private productService: ProductService) {}
+  constructor(private http: HttpClient, private productService: ProductService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
     this.fetchVehicleCategories();
     this.fetchVehicleTypes();
-    this.loadProductData();
   }
 
   // Fetch initial vehicle categories
@@ -222,24 +222,24 @@ export class MotorQuotationFormComponent implements OnInit {
     });
   }
 
-  // Updated fetchAllActiveDiscounts to ensure proper timing
-  fetchAllActiveDiscounts() {
-    console.log('📡 Fetching all active discounts...');
-    this.productService.getAllActiveDiscounts().subscribe({
-      next: (data: Discount[]) => {
-        console.log('✅ Discounts API response:', data);
-        this.discounts = data;
+  // Fetch all active adjustments
+  fetchAllActiveAdjustments() {
+    console.log('📡 Fetching all active adjustments...');
+    this.productService.getAllActiveAdjustments().subscribe({
+      next: (data: Adjustment[]) => {
+        console.log('✅ Adjustments API response:', data);
+        this.adjustments = data;
         
         // Initialize values after a small delay to ensure data is set
         setTimeout(() => {
-          console.log('⏰ Initializing discount values after timeout...');
-          this.initializeDiscountValues();
+          console.log('⏰ Initializing adjustment values after timeout...');
+          this.initializeAdjustmentValues();
         }, 100);
       },
       error: (error) => {
-        console.error('❌ Error fetching discounts:', error);
-        this.discounts = [];
-        this.selectedDiscountValues = {};
+        console.error('❌ Error fetching adjustments:', error);
+        this.adjustments = [];
+        this.selectedAdjustmentValues = {};
       }
     });
   }
@@ -323,110 +323,123 @@ export class MotorQuotationFormComponent implements OnInit {
   // Handle vehicle product selection change
   handleVehicleProductChange(productId: string) {
     this.selectedVehicleProduct = productId;
-    // You can add additional logic here when product is selected
-    // For example: update rates, calculate premium, etc.
-    console.log('Selected vehicle product:', productId);
+    console.log('🚗 Vehicle product selected:', productId);
      if (productId) {
-      // Fetch discounts when product is selected
-      this.fetchAllActiveDiscounts();
+       // Fetch adjustments when product is selected
+      this.fetchAllActiveAdjustments();
+      this.loadProductData();
     } else {
-      this.discounts = [];
-      this.selectedDiscountValues = {};
+      this.adjustments = [];
+      this.selectedAdjustmentValues = {};
     }
   }
 
-  // Updated initializeDiscountValues with proper debugging
-  initializeDiscountValues() {
-    console.log('🚀 START: initializeDiscountValues');
-    console.log('Discounts received:', this.discounts);
+  // Initialize adjustment values
+  initializeAdjustmentValues() {
+    console.log('🚀 START: initializeAdjustmentValues');
+    this.selectedAdjustmentValues = {};
     
-    this.selectedDiscountValues = {};
-    
-    if (!this.discounts || this.discounts.length === 0) {
-      console.warn('❌ No discounts available to initialize');
+    if (!this.adjustments || this.adjustments.length === 0) {
+      console.warn('❌ No adjustments available to initialize');
       return;
     }
     
-    this.discounts.forEach((discount, index) => {
-      console.log(`\n📋 Processing discount ${index + 1}:`, discount.name);
-      console.log('Discount ID:', discount.id);
-      console.log('Input Control Type:', discount.inputControlType);
-      console.log('Rate Response List:', discount.rateResponseList);
+    // Sort adjustments by orderNo before initializing
+    const sortedAdjustments = this.getSortedAdjustments();
+    
+    sortedAdjustments.forEach((adjustment, index) => {
+      console.log(`\n📋 Processing adjustment ${index + 1}:`, adjustment.name);
+      console.log('Adjustment ID:', adjustment.id);
+      console.log('Order No:', adjustment.orderNo);
+      console.log('Adjustment Type:', adjustment.adjustmentType);
+      console.log('Input Control Type:', adjustment.inputControlType);
+      console.log('Rate Response List:', adjustment.rateResponseList);
       
-      // Check if discount object is valid
-      if (!discount || !discount.id) {
-        console.warn('❌ Invalid discount object:', discount);
+      // Check if adjustment object is valid
+      if (!adjustment || !adjustment.id) {
+        console.warn('❌ Invalid adjustment object:', adjustment);
         return;
       }
       
       // Check if rateResponseList exists and has items
-      if (discount.rateResponseList && discount.rateResponseList.length > 0) {
-        // Filter out invalid rate responses
-        const validRates = discount.rateResponseList.filter(rate => 
-          rate && typeof rate.value === 'number'
-        );
+      if (adjustment.rateResponseList && adjustment.rateResponseList.length > 0) {
+        // Filter out invalid rate responses and sort by orderNo
+        const validRates = adjustment.rateResponseList
+          .filter(rate => rate && typeof rate.value === 'number')
+          .sort((a, b) => a.orderNo - b.orderNo);
         
         console.log('✅ Valid rates found:', validRates.length);
         
         if (validRates.length > 0) {
-          if (discount.inputControlType === 'DROPDOWN') {
-            // Use the first valid rate value
-            const selectedValue = validRates[0].value;
-            this.selectedDiscountValues[discount.id] = selectedValue;
-            console.log(`🎯 Set DROPDOWN "${discount.name}" to:`, selectedValue);
-          } else if (discount.inputControlType === 'INPUT_FIELD') {
-            // For input fields, set to the first value (not 0)
-            const selectedValue = validRates[0].value;
-            this.selectedDiscountValues[discount.id] = selectedValue;
-            console.log(`🎯 Set INPUT_FIELD "${discount.name}" to:`, selectedValue);
-          } else {
-            // Fallback for unknown input types
-            this.selectedDiscountValues[discount.id] = 0;
-            console.warn(`❓ Unknown inputControlType for "${discount.name}": ${discount.inputControlType}`);
-          }
+          // Use the first valid rate value (lowest orderNo)
+          const selectedValue = validRates[0].value;
+          this.selectedAdjustmentValues[adjustment.id] = selectedValue;
+          console.log(`🎯 Set ${adjustment.inputControlType} "${adjustment.name}" to:`, selectedValue);
         } else {
           // No valid rate responses
-          this.selectedDiscountValues[discount.id] = 0;
-          console.warn(`⚠️ No valid rate responses for "${discount.name}"`);
+          this.selectedAdjustmentValues[adjustment.id] = 0;
+          console.warn(`⚠️ No valid rate responses for "${adjustment.name}"`);
         }
       } else {
         // No rate responses available
-        this.selectedDiscountValues[discount.id] = 0;
-        console.log(`ℹ️ No rate responses for "${discount.name}", set to 0`);
+        this.selectedAdjustmentValues[adjustment.id] = 0;
+        console.log(`ℹ️ No rate responses for "${adjustment.name}", set to 0`);
       }
     });
     
-    console.log('🏁 FINAL selectedDiscountValues:', this.selectedDiscountValues);
+    console.log('🏁 FINAL selectedAdjustmentValues:', this.selectedAdjustmentValues);
     
+    // Force change detection to update the view
+    setTimeout(() => {
+      this.cdr.detectChanges();
+      console.log('🔄 Change detection triggered');
+    });
   }
 
-  // Get discount options for dropdown - Convert numbers to strings for app-select
-  getDiscountOptions(rateResponseList: RateResponse[]): Option[] {
-    return rateResponseList.map(rate => ({
+
+  // Get adjustments sorted by orderNo
+  getSortedAdjustments(): Adjustment[] {
+    return this.adjustments.sort((a, b) => a.orderNo - b.orderNo);
+  }
+
+  // Get adjustment options for dropdown
+  getAdjustmentOptions(rateResponseList: RateResponse[]): Option[] {
+    if (!rateResponseList || rateResponseList.length === 0) {
+      return [];
+    }
+    
+    // Sort rate responses by orderNo
+    const sortedRates = rateResponseList.sort((a, b) => a.orderNo - b.orderNo);
+    
+    return sortedRates.map(rate => ({
       label: `${rate.value}%`,
-      value: rate.value.toString() // Convert number to string
+      value: rate.value.toString()
     }));
   }
 
-  // Get current discount value
-  getDiscountValue(discountId: string): number {
-    return this.selectedDiscountValues[discountId] || 0;
+  // Get placeholder based on adjustment type
+  getAdjustmentPlaceholder(adjustmentType: string): string {
+    return adjustmentType === 'LOADING' ? 'Select loading %' : 'Select discount %';
   }
 
-  // Handle discount input field change
-  onDiscountInputChange(discountId: string, event: any) {
+  // Get current adjustment value
+  getAdjustmentValue(adjustmentId: string): number {
+    return this.selectedAdjustmentValues[adjustmentId] || 0;
+  }
+
+  // Handle adjustment input field change
+  onAdjustmentInputChange(adjustmentId: string, event: any) {
     const value = parseFloat(event.target.value) || 0;
-    this.selectedDiscountValues[discountId] = value;
-    console.log(`Discount ${discountId} value changed to:`, value);
+    this.selectedAdjustmentValues[adjustmentId] = value;
+    console.log(`Adjustment ${adjustmentId} input changed to:`, value);
   }
 
-  // Handle discount dropdown change - Convert string back to number
-  onDiscountSelectChange(discountId: string, value: string) {
-    this.selectedDiscountValues[discountId] = parseFloat(value) || 0;
-    console.log(`Discount ${discountId} value changed to:`, this.selectedDiscountValues[discountId]);
+  // Handle adjustment dropdown change
+  onAdjustmentSelectChange(adjustmentId: string, value: string) {
+    const numericValue = parseFloat(value) || 0;
+    this.selectedAdjustmentValues[adjustmentId] = numericValue;
+    console.log(`Adjustment ${adjustmentId} dropdown changed to:`, numericValue);
   }
-
-
 
   ///////////////////////////////////////////////////
   loadProductData(): void {

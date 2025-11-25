@@ -5,7 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { VehicleType } from './motor-quotation-model/vehicle-type.model';
 import { VehicleProduct } from './motor-quotation-model/vehicle-product.model';
-import { Discount } from './motor-quotation-model/rate-response.model';
+import { Adjustment } from './motor-quotation-model/rate-response.model';
 
 @Injectable({
   providedIn: 'root'
@@ -26,9 +26,9 @@ export class ProductService {
     return this.http.get<VehicleProduct[]>(`${environment.quotationApiUrl}/product/getByVehicleTypeId/${vehicleTypeId}`);
   }
 
-  // Fetch all active discounts
-  getAllActiveDiscounts(): Observable<Discount[]> {
-    return this.http.get<Discount[]>(`${environment.quotationApiUrl}/discount/getAllActive`);
+  // Fetch all active adjustments (replaces discounts)
+  getAllActiveAdjustments(): Observable<Adjustment[]> {
+    return this.http.get<Adjustment[]>(`${environment.quotationApiUrl}/adjustment/getAllActive`);
   }
 
   // Fetch vehicle categories
