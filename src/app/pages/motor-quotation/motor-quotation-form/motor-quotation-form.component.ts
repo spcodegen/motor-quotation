@@ -10,6 +10,8 @@ import { ProductService } from '../product.service';
 import { VehicleType } from '../motor-quotation-model/vehicle-type.model';
 import { VehicleProduct } from '../motor-quotation-model/vehicle-product.model';
 import { Adjustment, RateResponse } from '../motor-quotation-model/rate-response.model';
+import { PremiumCalculationResponse } from '../motor-quotation-model/premium-calculation-response.mode';
+import { PremiumCalculationRequest } from '../motor-quotation-model/premium-calculation-request.mode';
 // import { Discount, RateResponse } from '../motor-quotation-model/rate-response.model';
 
 
@@ -75,6 +77,18 @@ export class MotorQuotationFormComponent implements OnInit {
   adjustments: Adjustment[] = [];
   selectedAdjustmentValues: { [key: string]: number } = {};
 
+  // Premium calculation
+  premiumResult: PremiumCalculationResponse | null = null;
+  isCalculating: boolean = false;
+
+  // Adjustment mappings for API
+  private adjustmentMappings = {
+    'Riya Sumithuru Discount': 'rsdRate',
+    'Business Promotion Discount': 'businessPromotionDiscountRate',
+    'Hire Purchase Leasing': 'hpLeasingRate',
+    'Multiple Rebate': 'multipleRebateRate'
+  };
+
   message = '';
   showPassword = false;
   selectedOption = '';
@@ -96,6 +110,73 @@ export class MotorQuotationFormComponent implements OnInit {
   ngOnInit(): void {
     this.fetchVehicleCategories();
     this.fetchVehicleTypes();
+  }
+
+  // Check if premium can be calculated
+  canCalculatePremium(): boolean {
+    return !!this.selectedVehicleProduct && 
+           !!this.sumInsured && 
+           this.sumInsured !== '' && 
+           this.adjustments.length > 0;
+  }
+
+  // Calculate premium
+  // In the component class, update the calculatePremium method
+calculatePremium() {
+  if (!this.canCalculatePremium()) {
+    console.warn('Cannot calculate premium: Missing required data');
+    return;
+  }
+
+  this.isCalculating = true;
+  this.premiumResult = null;
+
+  // Prepare request data
+  const request: PremiumCalculationRequest = {
+    productId: this.selectedVehicleProduct,
+    sumInsured: this.parseSumInsured(this.sumInsured),
+    rsdRate: 0,
+    businessPromotionDiscountRate: 0,
+    hpLeasingRate: 0,
+    multipleRebateRate: 0,
+  };
+
+  // Map adjustment values to request - FIXED VERSION
+  this.adjustments.forEach(adjustment => {
+    const mappingKey = adjustment.name as keyof typeof this.adjustmentMappings;
+    const adjustmentKey = this.adjustmentMappings[mappingKey];
+    
+    if (adjustmentKey) {
+      // Use type assertion to fix the TypeScript error
+      (request as any)[adjustmentKey] = this.getAdjustmentValue(adjustment.id);
+    }
+  });
+
+  console.log('📊 Premium calculation request:', request);
+
+  // Call API
+  this.productService.calculateTotalPremium(request).subscribe({
+    next: (response: PremiumCalculationResponse) => {
+      this.premiumResult = response;
+      this.isCalculating = false;
+      console.log('✅ Premium calculation response:', response);
+      console.log('💰 Own Damage Premium:', response.ownDamagePremium);
+      
+      this.cdr.detectChanges();
+    },
+    error: (error) => {
+      console.error('❌ Error calculating premium:', error);
+      this.isCalculating = false;
+      this.premiumResult = null;
+      this.cdr.detectChanges();
+    }
+  });
+}
+
+  // Parse sum insured string to number (remove commas)
+  private parseSumInsured(sumInsured: string): number {
+    const cleanValue = sumInsured.replace(/,/g, '');
+    return parseFloat(cleanValue) || 0;
   }
 
   // Fetch initial vehicle categories
@@ -327,7 +408,7 @@ export class MotorQuotationFormComponent implements OnInit {
      if (productId) {
        // Fetch adjustments when product is selected
       this.fetchAllActiveAdjustments();
-      this.loadProductData();
+      // this.loadProductData();
     } else {
       this.adjustments = [];
       this.selectedAdjustmentValues = {};

@@ -6,6 +6,8 @@ import { Observable } from 'rxjs';
 import { VehicleType } from './motor-quotation-model/vehicle-type.model';
 import { VehicleProduct } from './motor-quotation-model/vehicle-product.model';
 import { Adjustment } from './motor-quotation-model/rate-response.model';
+import { PremiumCalculationRequest } from './motor-quotation-model/premium-calculation-request.mode';
+import { PremiumCalculationResponse } from './motor-quotation-model/premium-calculation-response.mode';
 
 @Injectable({
   providedIn: 'root'
@@ -15,6 +17,14 @@ export class ProductService {
   private quotationApiUrl = environment.quotationApiUrl;
 
   constructor(private http: HttpClient){}
+
+  // Calculate total premium
+  calculateTotalPremium(request: PremiumCalculationRequest): Observable<PremiumCalculationResponse> {
+    return this.http.post<PremiumCalculationResponse>(
+      `${environment.quotationApiUrl}/quotation/calculateTotalPremium`, 
+      request
+    );
+  }
 
   // Fetch all active vehicle types
   getVehicleTypes(): Observable<VehicleType[]> {
