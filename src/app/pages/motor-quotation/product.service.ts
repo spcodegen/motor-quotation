@@ -18,7 +18,7 @@ export class ProductService {
 
   constructor(private http: HttpClient){}
 
-  // Calculate total premium
+  // Calculate total premium with new structure
   calculateTotalPremium(request: PremiumCalculationRequest): Observable<PremiumCalculationResponse> {
     return this.http.post<PremiumCalculationResponse>(
       `${environment.quotationApiUrl}/quotation/calculateTotalPremium`, 

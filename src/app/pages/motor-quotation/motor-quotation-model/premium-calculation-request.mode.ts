@@ -1,8 +1,7 @@
+import { QuotationAdjustmentRequest } from "./quotation-adjustment-request.model";
+
 export interface PremiumCalculationRequest {
-  businessPromotionDiscountRate: number;
-  hpLeasingRate: number;
-  multipleRebateRate: number;
   productId: string;
-  rsdRate: number;
+  quotationAdjustmentRequestList: QuotationAdjustmentRequest[];
   sumInsured: number;
 }

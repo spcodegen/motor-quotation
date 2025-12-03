@@ -4,6 +4,9 @@ export interface PremiumCalculationResponse {
   basicPremium: number;
   basicRate: number;
   ownDamagePremium: number;
+  netPremium: number | null;
+  grossPremium: number | null;
+  totalPremium: number | null;
   coverResponseList: any | null;
   createdBy: string | null;
   createdDateTime: number | null;

@@ -12,8 +12,7 @@ import { VehicleProduct } from '../motor-quotation-model/vehicle-product.model';
 import { Adjustment, RateResponse } from '../motor-quotation-model/rate-response.model';
 import { PremiumCalculationResponse } from '../motor-quotation-model/premium-calculation-response.mode';
 import { PremiumCalculationRequest } from '../motor-quotation-model/premium-calculation-request.mode';
-// import { Discount, RateResponse } from '../motor-quotation-model/rate-response.model';
-
+import { QuotationAdjustmentRequest } from '../motor-quotation-model/quotation-adjustment-request.model';
 
 export interface Cover {
   coverName: string;
@@ -40,7 +39,6 @@ interface DiscountOption {
   value: number;
 }
 
-
 @Component({
   selector: 'app-motor-quotation-form',
   imports: [
@@ -53,8 +51,8 @@ interface DiscountOption {
   templateUrl: './motor-quotation-form.component.html',
   styleUrl: './motor-quotation-form.component.css'
 })
-export class MotorQuotationFormComponent implements OnInit {
 
+export class MotorQuotationFormComponent implements OnInit {
   // Options for dropdowns
   categoryOptions: Option[] = [];
   makeOptions: Option[] = [];
@@ -72,11 +70,15 @@ export class MotorQuotationFormComponent implements OnInit {
   sumInsured: string = '';
   selectedVehicleType: string = '';
   selectedVehicleProduct: string = '';
-
-  // Adjustments data (replaces discounts)
+  // Adjustments data
   adjustments: Adjustment[] = [];
-  selectedAdjustmentValues: { [key: string]: number } = {};
-
+  selectedAdjustmentValues: { 
+    [key: string]: { 
+      rateId?: string, 
+      value: number,
+      amount?: number 
+    } 
+  } = {};
   // Premium calculation
   premiumResult: PremiumCalculationResponse | null = null;
   isCalculating: boolean = false;
@@ -120,64 +122,287 @@ export class MotorQuotationFormComponent implements OnInit {
            this.adjustments.length > 0;
   }
 
-  // Calculate premium
-  // In the component class, update the calculatePremium method
-calculatePremium() {
-  if (!this.canCalculatePremium()) {
-    console.warn('Cannot calculate premium: Missing required data');
-    return;
+  // Get selected rate ID for an adjustment
+  getSelectedRateId(adjustmentId: string): string {
+    return this.selectedAdjustmentValues[adjustmentId]?.rateId || '';
   }
 
-  this.isCalculating = true;
-  this.premiumResult = null;
-
-  // Prepare request data
-  const request: PremiumCalculationRequest = {
-    productId: this.selectedVehicleProduct,
-    sumInsured: this.parseSumInsured(this.sumInsured),
-    rsdRate: 0,
-    businessPromotionDiscountRate: 0,
-    hpLeasingRate: 0,
-    multipleRebateRate: 0,
-  };
-
-  // Map adjustment values to request - FIXED VERSION
-  this.adjustments.forEach(adjustment => {
-    const mappingKey = adjustment.name as keyof typeof this.adjustmentMappings;
-    const adjustmentKey = this.adjustmentMappings[mappingKey];
-    
-    if (adjustmentKey) {
-      // Use type assertion to fix the TypeScript error
-      (request as any)[adjustmentKey] = this.getAdjustmentValue(adjustment.id);
+  // Get placeholder based on adjustment type and input control
+  getAdjustmentPlaceholder(adjustment: Adjustment): string {
+    if (adjustment.inputControlType === 'DROPDOWN') {
+      return adjustment.adjustmentType === 'LOADING' ? 'Select loading %' : 'Select discount %';
+    } else {
+      return adjustment.adjustmentType === 'LOADING' ? 'Enter amount (Rs.)' : 'Enter discount %';
     }
-  });
+  }
 
-  console.log('📊 Premium calculation request:', request);
-
-  // Call API
-  this.productService.calculateTotalPremium(request).subscribe({
-    next: (response: PremiumCalculationResponse) => {
-      this.premiumResult = response;
-      this.isCalculating = false;
-      console.log('✅ Premium calculation response:', response);
-      console.log('💰 Own Damage Premium:', response.ownDamagePremium);
-      
-      this.cdr.detectChanges();
-    },
-    error: (error) => {
-      console.error('❌ Error calculating premium:', error);
-      this.isCalculating = false;
-      this.premiumResult = null;
-      this.cdr.detectChanges();
+  // Calculate premium with updated API structure
+  calculatePremium() {
+    if (!this.canCalculatePremium()) {
+      console.warn('Cannot calculate premium: Missing required data');
+      return;
     }
-  });
-}
+
+    this.isCalculating = true;
+    this.premiumResult = null;
+
+    // Prepare quotation adjustment request list
+    const quotationAdjustmentRequestList: QuotationAdjustmentRequest[] = [];
+
+    // Add each adjustment with its selected rate ID or amount
+    this.adjustments.forEach(adjustment => {
+      const selectedData = this.selectedAdjustmentValues[adjustment.id];
+      if (selectedData) {
+        const request: QuotationAdjustmentRequest = {
+          adjustmentId: adjustment.id
+        };
+
+        if (adjustment.inputControlType === 'DROPDOWN' && selectedData.rateId) {
+          // For DROPDOWN type, send rateId
+          request.rateId = selectedData.rateId;
+        } else if (adjustment.inputControlType === 'INPUT_FIELD') {
+          // For INPUT_FIELD type, send amount (for LOADING) or value (for DISCOUNT as rate)
+          if (adjustment.adjustmentType === 'LOADING') {
+            request.amount = selectedData.value;
+          } else {
+            // For DISCOUNT INPUT_FIELD, we might need to send rateId or handle differently
+            // Based on your API, it seems INPUT_FIELD discounts should send amount
+            request.amount = selectedData.value;
+          }
+        }
+
+        quotationAdjustmentRequestList.push(request);
+      }
+    });
+
+    // Prepare request data
+    const request: PremiumCalculationRequest = {
+      productId: this.selectedVehicleProduct,
+      quotationAdjustmentRequestList: quotationAdjustmentRequestList,
+      sumInsured: this.parseSumInsured(this.sumInsured),
+    };
+
+    console.log('📊 Premium calculation request:', request);
+    console.log('Request JSON:', JSON.stringify(request, null, 2));
+
+    // Call API
+    this.productService.calculateTotalPremium(request).subscribe({
+      next: (response: PremiumCalculationResponse) => {
+        this.premiumResult = response;
+        this.isCalculating = false;
+        console.log('✅ Premium calculation response:', response);
+        console.log('💰 Basic Premium:', response.basicPremium);
+        console.log('🛡️ Own Damage Premium:', response.ownDamagePremium);
+        
+        // Force UI update
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        console.error('❌ Error calculating premium:', error);
+        this.isCalculating = false;
+        this.premiumResult = null;
+        
+        // Force UI update
+        this.cdr.detectChanges();
+      }
+    });
+  }
 
   // Parse sum insured string to number (remove commas)
   private parseSumInsured(sumInsured: string): number {
     const cleanValue = sumInsured.replace(/,/g, '');
     return parseFloat(cleanValue) || 0;
   }
+
+  // Get adjustments sorted by orderNo
+  getSortedAdjustments(): Adjustment[] {
+    return this.adjustments.sort((a, b) => a.orderNo - b.orderNo);
+  }
+
+  // Get adjustment options for dropdown
+  getAdjustmentOptions(rateResponseList: RateResponse[]): Option[] {
+    if (!rateResponseList || rateResponseList.length === 0) {
+      return [];
+    }
+    
+    // Sort rate responses by orderNo
+    const sortedRates = rateResponseList.sort((a, b) => a.orderNo - b.orderNo);
+    
+    return sortedRates.map(rate => ({
+      label: `${rate.value}${rate.rateType === 'LOADING' ? '%' : '%'}`,
+      value: rate.id // Store rate ID as value
+    }));
+  }
+
+  // Get current adjustment value
+  getAdjustmentValue(adjustmentId: string): number {
+    return this.selectedAdjustmentValues[adjustmentId]?.value || 0;
+  }
+
+  // Handle adjustment input field change
+  onAdjustmentInputChange(adjustmentId: string, event: any) {
+    const value = parseFloat(event.target.value) || 0;
+    const adjustment = this.adjustments.find(a => a.id === adjustmentId);
+    
+    // For INPUT_FIELD, store the entered value
+    this.selectedAdjustmentValues[adjustmentId] = { 
+      value: value,
+      amount: value // Store amount for LOADING type
+    };
+    
+    console.log(`Adjustment ${adjustmentId} input changed to:`, value, 
+                adjustment?.adjustmentType === 'LOADING' ? 'Rs.' : '%');
+    
+    // Reset premium result when adjustments change
+    this.premiumResult = null;
+  }
+
+  // Handle adjustment dropdown change
+  onAdjustmentSelectChange(adjustmentId: string, selectedRateId: string) {
+    const adjustment = this.adjustments.find(a => a.id === adjustmentId);
+    
+    if (adjustment && adjustment.rateResponseList) {
+      // Find the selected rate to get the value
+      const selectedRate = adjustment.rateResponseList.find(r => r.id === selectedRateId);
+      const value = selectedRate ? selectedRate.value : 0;
+      
+      this.selectedAdjustmentValues[adjustmentId] = { 
+        rateId: selectedRateId, 
+        value: value 
+      };
+      console.log(`Adjustment ${adjustmentId} dropdown changed to:`, value, 
+                  adjustment.adjustmentType === 'LOADING' ? 'Rs.' : '%', 
+                  'Rate ID:', selectedRateId);
+    }
+    
+    // Reset premium result when adjustments change
+    this.premiumResult = null;
+  }
+
+  // Initialize adjustment values
+  initializeAdjustmentValues() {
+    console.log('🚀 START: initializeAdjustmentValues');
+    this.selectedAdjustmentValues = {};
+    
+    if (!this.adjustments || this.adjustments.length === 0) {
+      console.warn('❌ No adjustments available to initialize');
+      return;
+    }
+    
+    // Sort adjustments by orderNo before initializing
+    const sortedAdjustments = this.getSortedAdjustments();
+    
+    sortedAdjustments.forEach((adjustment, index) => {
+      console.log(`\n📋 Processing adjustment ${index + 1}:`, adjustment.name);
+      console.log('Adjustment ID:', adjustment.id);
+      console.log('Order No:', adjustment.orderNo);
+      console.log('Adjustment Type:', adjustment.adjustmentType);
+      console.log('Input Control Type:', adjustment.inputControlType);
+      
+      // Check if adjustment object is valid
+      if (!adjustment || !adjustment.id) {
+        console.warn('❌ Invalid adjustment object:', adjustment);
+        return;
+      }
+      
+      if (adjustment.inputControlType === 'DROPDOWN') {
+        // For DROPDOWN type, use first rate from rateResponseList
+        if (adjustment.rateResponseList && adjustment.rateResponseList.length > 0) {
+          // Filter out invalid rate responses and sort by orderNo
+          const validRates = adjustment.rateResponseList
+            .filter(rate => rate && typeof rate.value === 'number')
+            .sort((a, b) => a.orderNo - b.orderNo);
+          
+          console.log('✅ Valid rates found:', validRates.length);
+          
+          if (validRates.length > 0) {
+            // Use the first valid rate
+            const selectedRate = validRates[0];
+            this.selectedAdjustmentValues[adjustment.id] = {
+              rateId: selectedRate.id,
+              value: selectedRate.value
+            };
+            console.log(`🎯 Set DROPDOWN "${adjustment.name}" to:`, 
+                       selectedRate.value, 
+                       adjustment.adjustmentType === 'LOADING' ? 'Rs.' : '%',
+                       'Rate ID:', selectedRate.id);
+          } else {
+            // No valid rate responses
+            this.selectedAdjustmentValues[adjustment.id] = { value: 0 };
+            console.warn(`⚠️ No valid rate responses for "${adjustment.name}"`);
+          }
+        } else {
+          // No rate responses available
+          this.selectedAdjustmentValues[adjustment.id] = { value: 0 };
+          console.log(`ℹ️ No rate responses for "${adjustment.name}", set to 0`);
+        }
+      } else {
+        // For INPUT_FIELD type, initialize to 0
+        this.selectedAdjustmentValues[adjustment.id] = { value: 0 };
+        console.log(`🎯 Set INPUT_FIELD "${adjustment.name}" to: 0`);
+      }
+    });
+    
+    console.log('🏁 FINAL selectedAdjustmentValues:', this.selectedAdjustmentValues);
+    
+    // Force change detection to update the view
+    setTimeout(() => {
+      this.cdr.detectChanges();
+      console.log('🔄 Change detection triggered');
+    });
+  }
+
+  // Calculate premium
+  // calculatePremium() {
+  // if (!this.canCalculatePremium()) {
+  //   console.warn('Cannot calculate premium: Missing required data');
+  //   return;
+  // }
+
+  // this.isCalculating = true;
+  // this.premiumResult = null;
+
+  // // Prepare request data
+  // const request: PremiumCalculationRequest = {
+  //   productId: this.selectedVehicleProduct,
+  //   sumInsured: this.parseSumInsured(this.sumInsured),
+  //   rsdRate: 0,
+  //   businessPromotionDiscountRate: 0,
+  //   hpLeasingRate: 0,
+  //   multipleRebateRate: 0,
+  // };
+
+  // // Map adjustment values to request - FIXED VERSION
+  // this.adjustments.forEach(adjustment => {
+  //   const mappingKey = adjustment.name as keyof typeof this.adjustmentMappings;
+  //   const adjustmentKey = this.adjustmentMappings[mappingKey];
+    
+  //   if (adjustmentKey) {
+  //     // Use type assertion to fix the TypeScript error
+  //     (request as any)[adjustmentKey] = this.getAdjustmentValue(adjustment.id);
+  //   }
+  // });
+
+  // console.log('📊 Premium calculation request:', request);
+
+  // // Call API
+  // this.productService.calculateTotalPremium(request).subscribe({
+  //   next: (response: PremiumCalculationResponse) => {
+  //     this.premiumResult = response;
+  //     this.isCalculating = false;
+  //     console.log('✅ Premium calculation response:', response);
+  //     console.log('💰 Own Damage Premium:', response.ownDamagePremium);
+      
+  //     this.cdr.detectChanges();
+  //   },
+  //   error: (error) => {
+  //     console.error('❌ Error calculating premium:', error);
+  //     this.isCalculating = false;
+  //     this.premiumResult = null;
+  //     this.cdr.detectChanges();
+  //   }
+  // });
+  // }
 
   // Fetch initial vehicle categories
   fetchVehicleCategories() {
@@ -193,7 +418,6 @@ calculatePremium() {
       }
     });
   }
-
   // Fetch vehicle makes based on selected category
   fetchVehicleMakes(category: string) {
     this.productService.getVehicleMakes(category).subscribe({
@@ -209,7 +433,6 @@ calculatePremium() {
       }
     });
   }
-
   // Fetch vehicle models based on selected category and make
   fetchVehicleModels(category: string, make: string) {
     this.productService.getVehicleModels(category, make).subscribe({
@@ -225,7 +448,6 @@ calculatePremium() {
       }
     });
   }
-
   // Fetch vehicle chassis based on selected category, make and model
   fetchVehicleChassis(category: string, make: string, model: string) {
     this.productService.getVehicleChassis(category, make, model).subscribe({
@@ -241,7 +463,6 @@ calculatePremium() {
       }
     });
   }
-
   // Fetch vehicle years based on selected category, make, model and chassis
   fetchVehicleYears(category: string, make: string, model: string, chassis: string) {
     this.productService.getVehicleYears(category, make, model, chassis).subscribe({
@@ -257,7 +478,6 @@ calculatePremium() {
       }
     });
   }
-
   // Fetch vehicle value based on all selected parameters
   fetchVehicleValue(category: string, chassis: string, make: string, model: string,  year: string) {
     this.productService.getVehicleValue(category, chassis, make, model,  year).subscribe({
@@ -271,7 +491,6 @@ calculatePremium() {
       }
     });
   }
-
   // Fetch vehicle types
   fetchVehicleTypes() {
     this.productService.getVehicleTypes().subscribe({
@@ -286,8 +505,7 @@ calculatePremium() {
       }
     });
   }
-
-   // Fetch vehicle products by vehicle type ID
+  // Fetch vehicle products by vehicle type ID
   fetchVehicleProducts(vehicleTypeId: string) {
     this.productService.getVehicleProductsByType(vehicleTypeId).subscribe({
       next: (data: VehicleProduct[]) => {
@@ -302,7 +520,6 @@ calculatePremium() {
       }
     });
   }
-
   // Fetch all active adjustments
   fetchAllActiveAdjustments() {
     console.log('📡 Fetching all active adjustments...');
@@ -400,7 +617,6 @@ calculatePremium() {
       this.fetchVehicleProducts(vehicleTypeId);
     }
   }
-
   // Handle vehicle product selection change
   handleVehicleProductChange(productId: string) {
     this.selectedVehicleProduct = productId;
@@ -415,113 +631,117 @@ calculatePremium() {
     }
   }
 
-  // Initialize adjustment values
-  initializeAdjustmentValues() {
-    console.log('🚀 START: initializeAdjustmentValues');
-    this.selectedAdjustmentValues = {};
-    
-    if (!this.adjustments || this.adjustments.length === 0) {
-      console.warn('❌ No adjustments available to initialize');
-      return;
-    }
-    
-    // Sort adjustments by orderNo before initializing
-    const sortedAdjustments = this.getSortedAdjustments();
-    
-    sortedAdjustments.forEach((adjustment, index) => {
-      console.log(`\n📋 Processing adjustment ${index + 1}:`, adjustment.name);
-      console.log('Adjustment ID:', adjustment.id);
-      console.log('Order No:', adjustment.orderNo);
-      console.log('Adjustment Type:', adjustment.adjustmentType);
-      console.log('Input Control Type:', adjustment.inputControlType);
-      console.log('Rate Response List:', adjustment.rateResponseList);
-      
-      // Check if adjustment object is valid
-      if (!adjustment || !adjustment.id) {
-        console.warn('❌ Invalid adjustment object:', adjustment);
-        return;
-      }
-      
-      // Check if rateResponseList exists and has items
-      if (adjustment.rateResponseList && adjustment.rateResponseList.length > 0) {
-        // Filter out invalid rate responses and sort by orderNo
-        const validRates = adjustment.rateResponseList
-          .filter(rate => rate && typeof rate.value === 'number')
-          .sort((a, b) => a.orderNo - b.orderNo);
-        
-        console.log('✅ Valid rates found:', validRates.length);
-        
-        if (validRates.length > 0) {
-          // Use the first valid rate value (lowest orderNo)
-          const selectedValue = validRates[0].value;
-          this.selectedAdjustmentValues[adjustment.id] = selectedValue;
-          console.log(`🎯 Set ${adjustment.inputControlType} "${adjustment.name}" to:`, selectedValue);
-        } else {
-          // No valid rate responses
-          this.selectedAdjustmentValues[adjustment.id] = 0;
-          console.warn(`⚠️ No valid rate responses for "${adjustment.name}"`);
-        }
-      } else {
-        // No rate responses available
-        this.selectedAdjustmentValues[adjustment.id] = 0;
-        console.log(`ℹ️ No rate responses for "${adjustment.name}", set to 0`);
-      }
-    });
-    
-    console.log('🏁 FINAL selectedAdjustmentValues:', this.selectedAdjustmentValues);
-    
-    // Force change detection to update the view
-    setTimeout(() => {
-      this.cdr.detectChanges();
-      console.log('🔄 Change detection triggered');
-    });
-  }
+  // Parse sum insured string to number (remove commas)
+  // private parseSumInsured(sumInsured: string): number {
+  //   const cleanValue = sumInsured.replace(/,/g, '');
+  //   return parseFloat(cleanValue) || 0;
+  // }
 
+  // Initialize adjustment values
+  // initializeAdjustmentValues() {
+  //   console.log('🚀 START: initializeAdjustmentValues');
+  //   this.selectedAdjustmentValues = {};
+    
+  //   if (!this.adjustments || this.adjustments.length === 0) {
+  //     console.warn('❌ No adjustments available to initialize');
+  //     return;
+  //   }
+    
+  //   // Sort adjustments by orderNo before initializing
+  //   const sortedAdjustments = this.getSortedAdjustments();
+    
+  //   sortedAdjustments.forEach((adjustment, index) => {
+  //     console.log(`\n📋 Processing adjustment ${index + 1}:`, adjustment.name);
+  //     console.log('Adjustment ID:', adjustment.id);
+  //     console.log('Order No:', adjustment.orderNo);
+  //     console.log('Adjustment Type:', adjustment.adjustmentType);
+  //     console.log('Input Control Type:', adjustment.inputControlType);
+  //     console.log('Rate Response List:', adjustment.rateResponseList);
+      
+  //     // Check if adjustment object is valid
+  //     if (!adjustment || !adjustment.id) {
+  //       console.warn('❌ Invalid adjustment object:', adjustment);
+  //       return;
+  //     }
+      
+  //     // Check if rateResponseList exists and has items
+  //     if (adjustment.rateResponseList && adjustment.rateResponseList.length > 0) {
+  //       // Filter out invalid rate responses and sort by orderNo
+  //       const validRates = adjustment.rateResponseList
+  //         .filter(rate => rate && typeof rate.value === 'number')
+  //         .sort((a, b) => a.orderNo - b.orderNo);
+        
+  //       console.log('✅ Valid rates found:', validRates.length);
+        
+  //       if (validRates.length > 0) {
+  //         // Use the first valid rate value (lowest orderNo)
+  //         const selectedValue = validRates[0].value;
+  //         this.selectedAdjustmentValues[adjustment.id] = selectedValue;
+  //         console.log(`🎯 Set ${adjustment.inputControlType} "${adjustment.name}" to:`, selectedValue);
+  //       } else {
+  //         // No valid rate responses
+  //         this.selectedAdjustmentValues[adjustment.id] = 0;
+  //         console.warn(`⚠️ No valid rate responses for "${adjustment.name}"`);
+  //       }
+  //     } else {
+  //       // No rate responses available
+  //       this.selectedAdjustmentValues[adjustment.id] = 0;
+  //       console.log(`ℹ️ No rate responses for "${adjustment.name}", set to 0`);
+  //     }
+  //   });
+    
+  //   console.log('🏁 FINAL selectedAdjustmentValues:', this.selectedAdjustmentValues);
+    
+  //   // Force change detection to update the view
+  //   setTimeout(() => {
+  //     this.cdr.detectChanges();
+  //     console.log('🔄 Change detection triggered');
+  //   });
+  // }
 
   // Get adjustments sorted by orderNo
-  getSortedAdjustments(): Adjustment[] {
-    return this.adjustments.sort((a, b) => a.orderNo - b.orderNo);
-  }
+  // getSortedAdjustments(): Adjustment[] {
+  //   return this.adjustments.sort((a, b) => a.orderNo - b.orderNo);
+  // }
 
   // Get adjustment options for dropdown
-  getAdjustmentOptions(rateResponseList: RateResponse[]): Option[] {
-    if (!rateResponseList || rateResponseList.length === 0) {
-      return [];
-    }
+  // getAdjustmentOptions(rateResponseList: RateResponse[]): Option[] {
+  //   if (!rateResponseList || rateResponseList.length === 0) {
+  //     return [];
+  //   }
     
-    // Sort rate responses by orderNo
-    const sortedRates = rateResponseList.sort((a, b) => a.orderNo - b.orderNo);
+  //   // Sort rate responses by orderNo
+  //   const sortedRates = rateResponseList.sort((a, b) => a.orderNo - b.orderNo);
     
-    return sortedRates.map(rate => ({
-      label: `${rate.value}%`,
-      value: rate.value.toString()
-    }));
-  }
+  //   return sortedRates.map(rate => ({
+  //     label: `${rate.value}%`,
+  //     value: rate.value.toString()
+  //   }));
+  // }
 
-  // Get placeholder based on adjustment type
-  getAdjustmentPlaceholder(adjustmentType: string): string {
-    return adjustmentType === 'LOADING' ? 'Select loading %' : 'Select discount %';
-  }
+  // Get placeholder based on adjustment type ***
+  // getAdjustmentPlaceholder(adjustmentType: string): string {
+  //   return adjustmentType === 'LOADING' ? 'Select loading %' : 'Select discount %';
+  // }
 
   // Get current adjustment value
-  getAdjustmentValue(adjustmentId: string): number {
-    return this.selectedAdjustmentValues[adjustmentId] || 0;
-  }
+  // getAdjustmentValue(adjustmentId: string): number {
+  //   return this.selectedAdjustmentValues[adjustmentId] || 0;
+  // }
 
   // Handle adjustment input field change
-  onAdjustmentInputChange(adjustmentId: string, event: any) {
-    const value = parseFloat(event.target.value) || 0;
-    this.selectedAdjustmentValues[adjustmentId] = value;
-    console.log(`Adjustment ${adjustmentId} input changed to:`, value);
-  }
+  // onAdjustmentInputChange(adjustmentId: string, event: any) {
+  //   const value = parseFloat(event.target.value) || 0;
+  //   this.selectedAdjustmentValues[adjustmentId] = value;
+  //   console.log(`Adjustment ${adjustmentId} input changed to:`, value);
+  // }
 
   // Handle adjustment dropdown change
-  onAdjustmentSelectChange(adjustmentId: string, value: string) {
-    const numericValue = parseFloat(value) || 0;
-    this.selectedAdjustmentValues[adjustmentId] = numericValue;
-    console.log(`Adjustment ${adjustmentId} dropdown changed to:`, numericValue);
-  }
-
+  // onAdjustmentSelectChange(adjustmentId: string, value: string) {
+  //   const numericValue = parseFloat(value) || 0;
+  //   this.selectedAdjustmentValues[adjustmentId] = numericValue;
+  //   console.log(`Adjustment ${adjustmentId} dropdown changed to:`, numericValue);
+  // }
   ///////////////////////////////////////////////////
   loadProductData(): void {
     // Simulate getting product data from service
