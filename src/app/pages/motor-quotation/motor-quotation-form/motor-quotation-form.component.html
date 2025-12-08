@@ -153,6 +153,134 @@
       </div>
     </div>
 
+    <!-- Covers Table - Updated to show empty for NOT_APPLICABLE -->
+    <div class="mt-8" *ngIf="covers.length > 0">
+      <h3 class="text-lg font-semibold mb-4 dark:text-white">Covers</h3>
+      <div class="overflow-x-auto">
+        <table class="min-w-full bg-white dark:bg-dark-800 border border-gray-300 dark:border-gray-600">
+          <thead>
+            <tr class="bg-gray-100 dark:bg-dark-700">
+              <th class="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-600">Name</th>
+              <th class="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-600">Seat Count</th>
+              <th class="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-600">Amount</th>
+              <th class="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Rate</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let cover of getSortedCovers()" 
+                class="border-t border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-dark-600">
+              <!-- Name Column -->
+              <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-600">
+                <div class="font-medium">{{ cover.name }}</div>
+                <div class="text-xs text-gray-500 mt-1">
+                  Order: {{ cover.orderNo }} | Code: {{ cover.code }}
+                </div>
+              </td>
+
+              <!-- Seat Count Column -->
+              <td class="px-4 py-3 text-sm border-r border-gray-300 dark:border-gray-600">
+                <div *ngIf="cover.seatResponseList && cover.seatResponseList.length > 0">
+                  <app-select
+                    [options]="getSeatOptions(cover.seatResponseList)"
+                    placeholder="Select seats"
+                    [value]="getSelectedSeatValue(cover.id)"
+                    (valueChange)="onSeatChange(cover.id, $event)"
+                    className="dark:bg-dark-900"
+                  ></app-select>
+                </div>
+                <div *ngIf="!cover.seatResponseList || cover.seatResponseList.length === 0" 
+                     class="text-gray-400 dark:text-gray-500 text-sm">
+                  —
+                </div>
+              </td>
+
+              <!-- Amount Column -->
+              <td class="px-4 py-3 text-sm border-r border-gray-300 dark:border-gray-600">
+                <!-- INPUT_FIELD for amount -->
+                <div *ngIf="cover.displayedAmountControlType === 'INPUT_FIELD'">
+                  <input
+                    type="number"
+                    [value]="getCoverAmount(cover.id)"
+                    (input)="onCoverAmountChange(cover.id, $event)"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-dark-900 dark:border-gray-600 dark:text-white"
+                    placeholder="Enter amount"
+                    step="0.01"
+                  />
+                  <!-- Show default amount if available -->
+                  <div *ngIf="cover.displayedAmountResponseList && cover.displayedAmountResponseList.length > 0" 
+                       class="text-xs text-gray-500 mt-1">
+                    Default: {{ getDefaultAmount(cover) | number }}
+                  </div>
+                </div>
+
+                <!-- DROPDOWN for amount -->
+                <div *ngIf="cover.displayedAmountControlType === 'DROPDOWN' && cover.displayedAmountResponseList && cover.displayedAmountResponseList.length > 0">
+                  <app-select
+                    [options]="getAmountOptions(cover.displayedAmountResponseList)"
+                    placeholder="Select amount"
+                    [value]="getCoverAmount(cover.id).toString()"
+                    (valueChange)="onCoverAmountSelectChange(cover.id, $event)"
+                    className="dark:bg-dark-900"
+                  ></app-select>
+                </div>
+                <div *ngIf="cover.displayedAmountControlType === 'DROPDOWN' && (!cover.displayedAmountResponseList || cover.displayedAmountResponseList.length === 0)" 
+                     class="text-gray-400 dark:text-gray-500 text-sm">
+                  —
+                </div>
+
+                <!-- NOT_APPLICABLE for amount - Show empty -->
+                <div *ngIf="cover.displayedAmountControlType === 'NOT_APPLICABLE'" 
+                     class="text-gray-400 dark:text-gray-500 text-sm">
+                  —
+                </div>
+              </td>
+
+              <!-- Rate Column -->
+              <td class="px-4 py-3 text-sm">
+                <!-- INPUT_FIELD for rate -->
+                <div *ngIf="cover.rateControlType === 'INPUT_FIELD'">
+                  <input
+                    type="number"
+                    [value]="getCoverRate(cover.id)"
+                    (input)="onCoverRateChange(cover.id, $event)"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-dark-900 dark:border-gray-600 dark:text-white"
+                    placeholder="Enter rate %"
+                    step="0.01"
+                  />
+                  <!-- Show default rate if available -->
+                  <div *ngIf="cover.rateResponseList && cover.rateResponseList.length > 0" 
+                       class="text-xs text-gray-500 mt-1">
+                    Default: {{ getDefaultRate(cover) }}%
+                  </div>
+                </div>
+
+                <!-- DROPDOWN for rate -->
+                <div *ngIf="cover.rateControlType === 'DROPDOWN' && cover.rateResponseList && cover.rateResponseList.length > 0">
+                  <app-select
+                    [options]="getRateOptions(cover.rateResponseList)"
+                    placeholder="Select rate"
+                    [value]="getCoverRate(cover.id).toString()"
+                    (valueChange)="onCoverRateSelectChange(cover.id, $event)"
+                    className="dark:bg-dark-900"
+                  ></app-select>
+                </div>
+                <div *ngIf="cover.rateControlType === 'DROPDOWN' && (!cover.rateResponseList || cover.rateResponseList.length === 0)" 
+                     class="text-gray-400 dark:text-gray-500 text-sm">
+                  —
+                </div>
+
+                <!-- NOT_APPLICABLE for rate - Show empty -->
+                <div *ngIf="cover.rateControlType === 'NOT_APPLICABLE'" 
+                     class="text-gray-400 dark:text-gray-500 text-sm">
+                  —
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- Calculate Button and Premium Results -->
     <div class="flex flex-col md:flex-row gap-4 items-end mt-6">
       <div class="w-full md:flex-1">
@@ -180,109 +308,5 @@
         </div>
       </div>
     </div>
-    <!-- <div>
-      <app-label for="input">Basic Premium</app-label>
-      <app-input-field 
-        type="number" 
-        id="input" 
-        [value]="basicPremium"
-        (valueChange)="product?.sumInsured"
-      />
-    </div> -->
-
-    <!-- Product Covers Section -->
-    <div *ngIf="product" class="mt-8">
-      <!-- Dynamic Product Title -->
-      <div class="pb-6 border-b border-gray-200 dark:border-gray-700 mb-6">
-        <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
-           Covers
-        </h2>
-      </div>
-
-      <!-- Covers Table -->
-      <div class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-        <table class="min-w-full divide-y divide-gray-300 dark:divide-gray-600">
-          <thead class="bg-gray-50 dark:bg-gray-800">
-            <tr>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Cover Name
-              </th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Value
-              </th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Status
-              </th>
-            </tr>
-          </thead>
-          <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-            <tr *ngFor="let cover of product.covers" class="hover:bg-gray-50 dark:hover:bg-gray-800">
-              <!-- Cover Name -->
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                {{ cover.coverName }}
-              </td>
-              
-              <!-- Cover Value -->
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                <!-- Text Component (Read-only) -->
-                <span *ngIf="cover.coverType === 'textComponent'">
-                  {{ getCoverDisplayValue(cover) }}
-                </span>
-
-                <!-- Dropdown Component -->
-                <div *ngIf="cover.coverType === 'dropdownComponent'" class="w-32">
-                  <app-select
-                    [options]="cover.processedOptions || []"
-                    [value]="cover.selectedValue || getDefaultValue(cover)"
-                    (valueChange)="onCoverValueChange(cover, $event)"
-                    [disabled]="!isCoverEditable(cover)"
-                    className="dark:bg-dark-900 text-sm"
-                  ></app-select>
-                </div>
-
-                <!-- Input Component -->
-                <div *ngIf="cover.coverType === 'inputComponent'" class="w-32">
-                  <app-input-field
-                    type="number"
-                    [value]="cover.selectedValue || getDefaultValue(cover)"
-                    (valueChange)="onCoverValueChange(cover, $event)"
-                    [disabled]="!isCoverEditable(cover)"
-                    className="text-sm"
-                  ></app-input-field>
-                </div>
-              </td>
-
-              <!-- Edit Status -->
-              <td class="px-6 py-4 whitespace-nowrap text-sm">
-                <span 
-                  [class]="isCoverEditable(cover) 
-                    ? 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100' 
-                    : 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100'"
-                >
-                  {{ isCoverEditable(cover) ? 'Editable' : 'Read Only' }}
-                </span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Total Premium Summary -->
-      <div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-        <div class="flex justify-between items-center">
-          <span class="text-lg font-semibold text-blue-900 dark:text-blue-100">
-            Total Premium:
-          </span>
-          <span class="text-xl font-bold text-blue-900 dark:text-blue-100">
-            {{ calculateTotalPremium() | currency:'USD':'symbol':'1.2-2' }}
-          </span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Fallback when no product data -->
-    <!-- <div *ngIf="!product" class="text-center py-8 text-gray-500 dark:text-gray-400">
-      Loading product data...
-    </div> -->
   </div>
 </app-component-card>

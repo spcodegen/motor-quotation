@@ -8,6 +8,7 @@ import { VehicleProduct } from './motor-quotation-model/vehicle-product.model';
 import { Adjustment } from './motor-quotation-model/rate-response.model';
 import { PremiumCalculationRequest } from './motor-quotation-model/premium-calculation-request.mode';
 import { PremiumCalculationResponse } from './motor-quotation-model/premium-calculation-response.mode';
+import { Cover } from './motor-quotation-model/cover.model';
 
 @Injectable({
   providedIn: 'root'
@@ -24,6 +25,11 @@ export class ProductService {
       `${environment.quotationApiUrl}/quotation/calculateTotalPremium`, 
       request
     );
+  }
+
+  // Fetch all active covers
+  getAllActiveCovers(): Observable<Cover[]> {
+    return this.http.get<Cover[]>(`${environment.quotationApiUrl}/cover/getAllActive`);
   }
 
   // Fetch all active vehicle types

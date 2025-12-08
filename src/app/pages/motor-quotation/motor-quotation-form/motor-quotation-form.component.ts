@@ -13,8 +13,11 @@ import { Adjustment, RateResponse } from '../motor-quotation-model/rate-response
 import { PremiumCalculationResponse } from '../motor-quotation-model/premium-calculation-response.mode';
 import { PremiumCalculationRequest } from '../motor-quotation-model/premium-calculation-request.mode';
 import { QuotationAdjustmentRequest } from '../motor-quotation-model/quotation-adjustment-request.model';
+import { Cover } from '../motor-quotation-model/cover.model';
+import { SeatResponse } from '../motor-quotation-model/seat-response.model';
+import { DisplayedAmountResponse } from '../motor-quotation-model/displayed-amount-response.model';
 
-export interface Cover {
+export interface CoverNew {
   coverName: string;
   coverType: 'textComponent' | 'dropdownComponent' | 'inputComponent';
   coverValueCanEdit: 'yes' | 'no';
@@ -26,7 +29,7 @@ export interface Cover {
 export interface Product {
   productName: string;
   sumInsured: number;
-  covers: Cover[];
+  covers: CoverNew[];
 }
 
 export interface Option {
@@ -79,6 +82,18 @@ export class MotorQuotationFormComponent implements OnInit {
       amount?: number 
     } 
   } = {};
+  // Covers data
+  covers: Cover[] = [];
+  selectedCoverValues: {
+    [key: string]: {
+      seatValue?: number;
+      amountValue?: number;
+      rateValue?: number;
+      selectedSeatId?: string;
+      selectedAmountId?: string;
+      selectedRateId?: string;
+    }
+  } = {};
   // Premium calculation
   premiumResult: PremiumCalculationResponse | null = null;
   isCalculating: boolean = false;
@@ -114,12 +129,12 @@ export class MotorQuotationFormComponent implements OnInit {
     this.fetchVehicleTypes();
   }
 
-  // Check if premium can be calculated
+  // Update canCalculatePremium to include covers
   canCalculatePremium(): boolean {
     return !!this.selectedVehicleProduct && 
            !!this.sumInsured && 
            this.sumInsured !== '' && 
-           this.adjustments.length > 0;
+           (this.adjustments.length > 0 || this.covers.length > 0);
   }
 
   // Get selected rate ID for an adjustment
@@ -352,58 +367,6 @@ export class MotorQuotationFormComponent implements OnInit {
     });
   }
 
-  // Calculate premium
-  // calculatePremium() {
-  // if (!this.canCalculatePremium()) {
-  //   console.warn('Cannot calculate premium: Missing required data');
-  //   return;
-  // }
-
-  // this.isCalculating = true;
-  // this.premiumResult = null;
-
-  // // Prepare request data
-  // const request: PremiumCalculationRequest = {
-  //   productId: this.selectedVehicleProduct,
-  //   sumInsured: this.parseSumInsured(this.sumInsured),
-  //   rsdRate: 0,
-  //   businessPromotionDiscountRate: 0,
-  //   hpLeasingRate: 0,
-  //   multipleRebateRate: 0,
-  // };
-
-  // // Map adjustment values to request - FIXED VERSION
-  // this.adjustments.forEach(adjustment => {
-  //   const mappingKey = adjustment.name as keyof typeof this.adjustmentMappings;
-  //   const adjustmentKey = this.adjustmentMappings[mappingKey];
-    
-  //   if (adjustmentKey) {
-  //     // Use type assertion to fix the TypeScript error
-  //     (request as any)[adjustmentKey] = this.getAdjustmentValue(adjustment.id);
-  //   }
-  // });
-
-  // console.log('📊 Premium calculation request:', request);
-
-  // // Call API
-  // this.productService.calculateTotalPremium(request).subscribe({
-  //   next: (response: PremiumCalculationResponse) => {
-  //     this.premiumResult = response;
-  //     this.isCalculating = false;
-  //     console.log('✅ Premium calculation response:', response);
-  //     console.log('💰 Own Damage Premium:', response.ownDamagePremium);
-      
-  //     this.cdr.detectChanges();
-  //   },
-  //   error: (error) => {
-  //     console.error('❌ Error calculating premium:', error);
-  //     this.isCalculating = false;
-  //     this.premiumResult = null;
-  //     this.cdr.detectChanges();
-  //   }
-  // });
-  // }
-
   // Fetch initial vehicle categories
   fetchVehicleCategories() {
     this.productService.getVehicleCategories().subscribe({
@@ -625,123 +588,282 @@ export class MotorQuotationFormComponent implements OnInit {
        // Fetch adjustments when product is selected
       this.fetchAllActiveAdjustments();
       // this.loadProductData();
+      // Fetch covers when product is selected
+      this.fetchAllActiveCovers();
     } else {
       this.adjustments = [];
       this.selectedAdjustmentValues = {};
+      this.covers = [];
+      this.selectedCoverValues = {};
     }
   }
 
-  // Parse sum insured string to number (remove commas)
-  // private parseSumInsured(sumInsured: string): number {
-  //   const cleanValue = sumInsured.replace(/,/g, '');
-  //   return parseFloat(cleanValue) || 0;
-  // }
+  // Get covers sorted by orderNo
+  getSortedCovers(): Cover[] {
+    return this.covers.sort((a, b) => a.orderNo - b.orderNo);
+  }
 
-  // Initialize adjustment values
-  // initializeAdjustmentValues() {
-  //   console.log('🚀 START: initializeAdjustmentValues');
-  //   this.selectedAdjustmentValues = {};
+  // Get seat options
+  getSeatOptions(seatResponseList: SeatResponse[]): Option[] {
+    if (!seatResponseList || seatResponseList.length === 0) {
+      return [];
+    }
     
-  //   if (!this.adjustments || this.adjustments.length === 0) {
-  //     console.warn('❌ No adjustments available to initialize');
-  //     return;
-  //   }
+    // Sort seats by orderNo
+    const sortedSeats = seatResponseList.sort((a, b) => a.orderNo - b.orderNo);
     
-  //   // Sort adjustments by orderNo before initializing
-  //   const sortedAdjustments = this.getSortedAdjustments();
+    return sortedSeats.map(seat => ({
+      label: seat.value.toString(),
+      value: seat.id
+    }));
+  }
+
+  // Get amount options
+  getAmountOptions(amountResponseList: DisplayedAmountResponse[]): Option[] {
+    if (!amountResponseList || amountResponseList.length === 0) {
+      return [];
+    }
     
-  //   sortedAdjustments.forEach((adjustment, index) => {
-  //     console.log(`\n📋 Processing adjustment ${index + 1}:`, adjustment.name);
-  //     console.log('Adjustment ID:', adjustment.id);
-  //     console.log('Order No:', adjustment.orderNo);
-  //     console.log('Adjustment Type:', adjustment.adjustmentType);
-  //     console.log('Input Control Type:', adjustment.inputControlType);
-  //     console.log('Rate Response List:', adjustment.rateResponseList);
+    // Sort amounts by orderNo
+    const sortedAmounts = amountResponseList.sort((a, b) => a.orderNo - b.orderNo);
+    
+    return sortedAmounts.map(amount => ({
+      label: amount.value.toString(),
+      value: amount.id
+    }));
+  }
+
+  // Get rate options
+  getRateOptions(rateResponseList: RateResponse[]): Option[] {
+    if (!rateResponseList || rateResponseList.length === 0) {
+      return [];
+    }
+    
+    // Sort rates by orderNo
+    const sortedRates = rateResponseList.sort((a, b) => a.orderNo - b.orderNo);
+    
+    return sortedRates.map(rate => ({
+      label: rate.value + '%',
+      value: rate.id
+    }));
+  }
+
+  // Get default amount from displayedAmountResponseList
+  getDefaultAmount(cover: Cover): number {
+    if (cover.displayedAmountResponseList && cover.displayedAmountResponseList.length > 0) {
+      const sortedAmounts = cover.displayedAmountResponseList.sort((a, b) => a.orderNo - b.orderNo);
+      return sortedAmounts[0].value;
+    }
+    return 0;
+  }
+
+  // Get default rate from rateResponseList
+  getDefaultRate(cover: Cover): number {
+    if (cover.rateResponseList && cover.rateResponseList.length > 0) {
+      const sortedRates = cover.rateResponseList.sort((a, b) => a.orderNo - b.orderNo);
+      return sortedRates[0].value;
+    }
+    return 0;
+  }
+
+  // Get selected seat value
+  getSelectedSeatValue(coverId: string): string {
+    return this.selectedCoverValues[coverId]?.selectedSeatId || '';
+  }
+
+  // Get cover amount
+  getCoverAmount(coverId: string): number {
+    return this.selectedCoverValues[coverId]?.amountValue || 0;
+  }
+
+  // Get cover rate
+  getCoverRate(coverId: string): number {
+    return this.selectedCoverValues[coverId]?.rateValue || 0;
+  }
+
+  // Handle seat change
+  onSeatChange(coverId: string, seatId: string) {
+    const cover = this.covers.find(c => c.id === coverId);
+    if (cover && cover.seatResponseList) {
+      const selectedSeat = cover.seatResponseList.find(s => s.id === seatId);
+      if (selectedSeat) {
+        if (!this.selectedCoverValues[coverId]) {
+          this.selectedCoverValues[coverId] = {};
+        }
+        this.selectedCoverValues[coverId].selectedSeatId = seatId;
+        this.selectedCoverValues[coverId].seatValue = selectedSeat.value;
+        console.log(`Cover ${coverId} seat changed to:`, selectedSeat.value);
+      }
+    }
+  }
+
+  // Handle cover amount input change
+  onCoverAmountChange(coverId: string, event: any) {
+    const value = parseFloat(event.target.value) || 0;
+    if (!this.selectedCoverValues[coverId]) {
+      this.selectedCoverValues[coverId] = {};
+    }
+    this.selectedCoverValues[coverId].amountValue = value;
+    console.log(`Cover ${coverId} amount changed to:`, value);
+  }
+
+  // Handle cover amount dropdown change
+  onCoverAmountSelectChange(coverId: string, amountId: string) {
+    const cover = this.covers.find(c => c.id === coverId);
+    if (cover && cover.displayedAmountResponseList) {
+      const selectedAmount = cover.displayedAmountResponseList.find(a => a.id === amountId);
+      if (selectedAmount) {
+        if (!this.selectedCoverValues[coverId]) {
+          this.selectedCoverValues[coverId] = {};
+        }
+        this.selectedCoverValues[coverId].selectedAmountId = amountId;
+        this.selectedCoverValues[coverId].amountValue = selectedAmount.value;
+        console.log(`Cover ${coverId} amount changed to:`, selectedAmount.value);
+      }
+    }
+  }
+
+  // Handle cover rate input change
+  onCoverRateChange(coverId: string, event: any) {
+    const value = parseFloat(event.target.value) || 0;
+    if (!this.selectedCoverValues[coverId]) {
+      this.selectedCoverValues[coverId] = {};
+    }
+    this.selectedCoverValues[coverId].rateValue = value;
+    console.log(`Cover ${coverId} rate changed to:`, value);
+  }
+
+  // Handle cover rate dropdown change
+  onCoverRateSelectChange(coverId: string, rateId: string) {
+    const cover = this.covers.find(c => c.id === coverId);
+    if (cover && cover.rateResponseList) {
+      const selectedRate = cover.rateResponseList.find(r => r.id === rateId);
+      if (selectedRate) {
+        if (!this.selectedCoverValues[coverId]) {
+          this.selectedCoverValues[coverId] = {};
+        }
+        this.selectedCoverValues[coverId].selectedRateId = rateId;
+        this.selectedCoverValues[coverId].rateValue = selectedRate.value;
+        console.log(`Cover ${coverId} rate changed to:`, selectedRate.value);
+      }
+    }
+  }
+
+  // Initialize cover values
+  initializeCoverValues() {
+    console.log('🚀 START: initializeCoverValues');
+    this.selectedCoverValues = {};
+    
+    if (!this.covers || this.covers.length === 0) {
+      console.warn('❌ No covers available to initialize');
+      return;
+    }
+    
+    // Sort covers by orderNo before initializing
+    const sortedCovers = this.getSortedCovers();
+    
+    sortedCovers.forEach((cover, index) => {
+      console.log(`\n📋 Processing cover ${index + 1}:`, cover.name);
+      console.log('Cover ID:', cover.id);
+      console.log('Order No:', cover.orderNo);
+      console.log('Rate Control Type:', cover.rateControlType);
+      console.log('Displayed Amount Control Type:', cover.displayedAmountControlType);
       
-  //     // Check if adjustment object is valid
-  //     if (!adjustment || !adjustment.id) {
-  //       console.warn('❌ Invalid adjustment object:', adjustment);
-  //       return;
-  //     }
+      // Initialize cover values object
+      this.selectedCoverValues[cover.id] = {};
       
-  //     // Check if rateResponseList exists and has items
-  //     if (adjustment.rateResponseList && adjustment.rateResponseList.length > 0) {
-  //       // Filter out invalid rate responses and sort by orderNo
-  //       const validRates = adjustment.rateResponseList
-  //         .filter(rate => rate && typeof rate.value === 'number')
-  //         .sort((a, b) => a.orderNo - b.orderNo);
+      // Initialize seat value if available
+      if (cover.seatResponseList && cover.seatResponseList.length > 0) {
+        const sortedSeats = cover.seatResponseList.sort((a, b) => a.orderNo - b.orderNo);
+        const defaultSeat = sortedSeats[0];
+        this.selectedCoverValues[cover.id].selectedSeatId = defaultSeat.id;
+        this.selectedCoverValues[cover.id].seatValue = defaultSeat.value;
+        console.log(`🎯 Set seat for "${cover.name}" to:`, defaultSeat.value);
+      }
+      
+      // Initialize amount value based on control type
+      if (cover.displayedAmountControlType === 'DROPDOWN' && 
+          cover.displayedAmountResponseList && 
+          cover.displayedAmountResponseList.length > 0) {
+        const sortedAmounts = cover.displayedAmountResponseList.sort((a, b) => a.orderNo - b.orderNo);
+        const defaultAmount = sortedAmounts[0];
+        this.selectedCoverValues[cover.id].selectedAmountId = defaultAmount.id;
+        this.selectedCoverValues[cover.id].amountValue = defaultAmount.value;
+        console.log(`🎯 Set amount (DROPDOWN) for "${cover.name}" to:`, defaultAmount.value);
+      } else if (cover.displayedAmountControlType === 'INPUT_FIELD') {
+        // For INPUT_FIELD, set to 0 initially
+        this.selectedCoverValues[cover.id].amountValue = 0;
+        console.log(`🎯 Set amount (INPUT_FIELD) for "${cover.name}" to: 0`);
+      } else if (cover.displayedAmountControlType === 'NOT_APPLICABLE' && 
+                 cover.displayedAmountResponseList && 
+                 cover.displayedAmountResponseList.length > 0) {
+        // Store default amount even if NOT_APPLICABLE
+        const sortedAmounts = cover.displayedAmountResponseList.sort((a, b) => a.orderNo - b.orderNo);
+        const defaultAmount = sortedAmounts[0];
+        this.selectedCoverValues[cover.id].amountValue = defaultAmount.value;
+        console.log(`🎯 Set default amount for "${cover.name}" to:`, defaultAmount.value);
+      }
+      
+      // Initialize rate value based on control type
+      if (cover.rateControlType === 'DROPDOWN' && 
+          cover.rateResponseList && 
+          cover.rateResponseList.length > 0) {
+        const sortedRates = cover.rateResponseList.sort((a, b) => a.orderNo - b.orderNo);
+        const defaultRate = sortedRates[0];
+        this.selectedCoverValues[cover.id].selectedRateId = defaultRate.id;
+        this.selectedCoverValues[cover.id].rateValue = defaultRate.value;
+        console.log(`🎯 Set rate (DROPDOWN) for "${cover.name}" to:`, defaultRate.value, '%');
+      } else if (cover.rateControlType === 'INPUT_FIELD') {
+        // For INPUT_FIELD, set to 0 initially
+        this.selectedCoverValues[cover.id].rateValue = 0;
+        console.log(`🎯 Set rate (INPUT_FIELD) for "${cover.name}" to: 0%`);
+      } else if (cover.rateControlType === 'NOT_APPLICABLE' && 
+                 cover.rateResponseList && 
+                 cover.rateResponseList.length > 0) {
+        // Store default rate even if NOT_APPLICABLE
+        const sortedRates = cover.rateResponseList.sort((a, b) => a.orderNo - b.orderNo);
+        const defaultRate = sortedRates[0];
+        this.selectedCoverValues[cover.id].rateValue = defaultRate.value;
+        console.log(`🎯 Set default rate for "${cover.name}" to:`, defaultRate.value, '%');
+      }
+    });
+    
+    console.log('🏁 FINAL selectedCoverValues:', this.selectedCoverValues);
+    
+    // Force change detection
+    setTimeout(() => {
+      this.cdr.detectChanges();
+      console.log('🔄 Change detection triggered for covers');
+    });
+  }
+
+  // Fetch all active covers
+  fetchAllActiveCovers() {
+    console.log('📡 Fetching all active covers...');
+    this.productService.getAllActiveCovers().subscribe({
+      next: (data: Cover[]) => {
+        // Filter covers for the selected product
+        const filteredCovers = data.filter(cover => 
+          cover.productResponse && cover.productResponse.id === this.selectedVehicleProduct
+        );
         
-  //       console.log('✅ Valid rates found:', validRates.length);
+        console.log('✅ Covers API response (filtered):', filteredCovers);
+        this.covers = filteredCovers;
         
-  //       if (validRates.length > 0) {
-  //         // Use the first valid rate value (lowest orderNo)
-  //         const selectedValue = validRates[0].value;
-  //         this.selectedAdjustmentValues[adjustment.id] = selectedValue;
-  //         console.log(`🎯 Set ${adjustment.inputControlType} "${adjustment.name}" to:`, selectedValue);
-  //       } else {
-  //         // No valid rate responses
-  //         this.selectedAdjustmentValues[adjustment.id] = 0;
-  //         console.warn(`⚠️ No valid rate responses for "${adjustment.name}"`);
-  //       }
-  //     } else {
-  //       // No rate responses available
-  //       this.selectedAdjustmentValues[adjustment.id] = 0;
-  //       console.log(`ℹ️ No rate responses for "${adjustment.name}", set to 0`);
-  //     }
-  //   });
-    
-  //   console.log('🏁 FINAL selectedAdjustmentValues:', this.selectedAdjustmentValues);
-    
-  //   // Force change detection to update the view
-  //   setTimeout(() => {
-  //     this.cdr.detectChanges();
-  //     console.log('🔄 Change detection triggered');
-  //   });
-  // }
+        // Initialize values after a small delay
+        setTimeout(() => {
+          console.log('⏰ Initializing cover values after timeout...');
+          this.initializeCoverValues();
+        }, 100);
+      },
+      error: (error) => {
+        console.error('❌ Error fetching covers:', error);
+        this.covers = [];
+        this.selectedCoverValues = {};
+      }
+    });
+  }
 
-  // Get adjustments sorted by orderNo
-  // getSortedAdjustments(): Adjustment[] {
-  //   return this.adjustments.sort((a, b) => a.orderNo - b.orderNo);
-  // }
-
-  // Get adjustment options for dropdown
-  // getAdjustmentOptions(rateResponseList: RateResponse[]): Option[] {
-  //   if (!rateResponseList || rateResponseList.length === 0) {
-  //     return [];
-  //   }
-    
-  //   // Sort rate responses by orderNo
-  //   const sortedRates = rateResponseList.sort((a, b) => a.orderNo - b.orderNo);
-    
-  //   return sortedRates.map(rate => ({
-  //     label: `${rate.value}%`,
-  //     value: rate.value.toString()
-  //   }));
-  // }
-
-  // Get placeholder based on adjustment type ***
-  // getAdjustmentPlaceholder(adjustmentType: string): string {
-  //   return adjustmentType === 'LOADING' ? 'Select loading %' : 'Select discount %';
-  // }
-
-  // Get current adjustment value
-  // getAdjustmentValue(adjustmentId: string): number {
-  //   return this.selectedAdjustmentValues[adjustmentId] || 0;
-  // }
-
-  // Handle adjustment input field change
-  // onAdjustmentInputChange(adjustmentId: string, event: any) {
-  //   const value = parseFloat(event.target.value) || 0;
-  //   this.selectedAdjustmentValues[adjustmentId] = value;
-  //   console.log(`Adjustment ${adjustmentId} input changed to:`, value);
-  // }
-
-  // Handle adjustment dropdown change
-  // onAdjustmentSelectChange(adjustmentId: string, value: string) {
-  //   const numericValue = parseFloat(value) || 0;
-  //   this.selectedAdjustmentValues[adjustmentId] = numericValue;
-  //   console.log(`Adjustment ${adjustmentId} dropdown changed to:`, numericValue);
-  // }
   ///////////////////////////////////////////////////
   loadProductData(): void {
     // Simulate getting product data from service
@@ -831,7 +953,7 @@ export class MotorQuotationFormComponent implements OnInit {
     return [{ label: cover.values.toString(), value: cover.values.toString() }];
   }
 
-  getDefaultValue(cover: Cover): any {
+  getDefaultValue(cover: CoverNew): any {
     if (Array.isArray(cover.values)) {
       return cover.values[0];
     }
@@ -877,13 +999,13 @@ export class MotorQuotationFormComponent implements OnInit {
     console.log('Picked time:', time); // e.g. "10:45"
   }
 
-  onCoverValueChange(cover: Cover, newValue: any): void {
+  onCoverValueChange(cover: CoverNew, newValue: any): void {
     cover.selectedValue = newValue;
     console.log(`Cover ${cover.coverName} changed to:`, newValue);
     this.calculateTotalPremium();
   }
 
-  getCoverDisplayValue(cover: Cover): string {
+  getCoverDisplayValue(cover: CoverNew): string {
     if (cover.coverType === 'textComponent') {
       if (cover.coverName === 'Basic Premium') {
         const premium = (cover.values * this.sumInsuredNew) / 100;
@@ -895,14 +1017,14 @@ export class MotorQuotationFormComponent implements OnInit {
     return cover.selectedValue || this.getDefaultValue(cover);
   }
 
-  isCoverEditable(cover: Cover): boolean {
+  isCoverEditable(cover: CoverNew): boolean {
     return cover.coverValueCanEdit === 'yes';
   }
 
   calculateTotalPremium(): number {
     if (!this.product) return 0;
     
-    return this.product.covers.reduce((total: number, cover: Cover) => {
+    return this.product.covers.reduce((total: number, cover: CoverNew) => {
       if (cover.coverName === 'Basic Premium') {
         return total + (cover.values * this.sumInsuredNew) / 100;
       }
