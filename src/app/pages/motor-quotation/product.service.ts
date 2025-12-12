@@ -27,6 +27,11 @@ export class ProductService {
     );
   }
 
+  // Fetch covers by product ID (updated API endpoint)
+  getCoversByProductId(productId: string): Observable<Cover[]> {
+    return this.http.get<Cover[]>(`${environment.quotationApiUrl}/cover/getByProductId/${productId}`);
+  }
+
   // Fetch all active covers
   getAllActiveCovers(): Observable<Cover[]> {
     return this.http.get<Cover[]>(`${environment.quotationApiUrl}/cover/getAllActive`);

@@ -8,6 +8,7 @@ export interface Cover {
   code: string;
   description: string;
   orderNo: number;
+  selectable: 'NO' | 'RATE' | 'AMOUNT'; // Added selectable field
   rateControlType: 'NOT_APPLICABLE' | 'INPUT_FIELD' | 'DROPDOWN';
   displayedAmountControlType: 'NOT_APPLICABLE' | 'INPUT_FIELD' | 'DROPDOWN';
   productResponse: any;

@@ -86,6 +86,7 @@ export class MotorQuotationFormComponent implements OnInit {
   covers: Cover[] = [];
   selectedCoverValues: {
     [key: string]: {
+      selectedOption?: string; // 'Yes' or 'No' for selectable
       seatValue?: number;
       amountValue?: number;
       rateValue?: number;
@@ -97,14 +98,6 @@ export class MotorQuotationFormComponent implements OnInit {
   // Premium calculation
   premiumResult: PremiumCalculationResponse | null = null;
   isCalculating: boolean = false;
-
-  // Adjustment mappings for API
-  private adjustmentMappings = {
-    'Riya Sumithuru Discount': 'rsdRate',
-    'Business Promotion Discount': 'businessPromotionDiscountRate',
-    'Hire Purchase Leasing': 'hpLeasingRate',
-    'Multiple Rebate': 'multipleRebateRate'
-  };
 
   message = '';
   showPassword = false;
@@ -127,6 +120,76 @@ export class MotorQuotationFormComponent implements OnInit {
   ngOnInit(): void {
     this.fetchVehicleCategories();
     this.fetchVehicleTypes();
+  }
+
+  // Get selectable options (Yes/No)
+  getSelectableOptions(selectableType: string): Option[] {
+    return [
+      { label: 'No', value: 'No' },
+      { label: 'Yes', value: 'Yes' }
+    ];
+  }
+
+  // Get cover selected option
+  getCoverSelectedOption(coverId: string): string {
+    return this.selectedCoverValues[coverId]?.selectedOption || 'No';
+  }
+
+  // Handle select option change
+  onCoverSelectOptionChange(coverId: string, option: string) {
+    if (!this.selectedCoverValues[coverId]) {
+      this.selectedCoverValues[coverId] = {};
+    }
+    this.selectedCoverValues[coverId].selectedOption = option;
+    console.log(`Cover ${coverId} select option changed to:`, option);
+    
+    // If option is 'No', clear amount/rate values for RATE/AMOUNT selectable types
+    const cover = this.covers.find(c => c.id === coverId);
+    if (cover && option === 'No') {
+      if (cover.selectable === 'AMOUNT') {
+        this.selectedCoverValues[coverId].amountValue = 0;
+        this.selectedCoverValues[coverId].selectedAmountId = '';
+      } else if (cover.selectable === 'RATE') {
+        this.selectedCoverValues[coverId].rateValue = 0;
+        this.selectedCoverValues[coverId].selectedRateId = '';
+      }
+    }
+  }
+
+  // Check if amount field should be shown
+  shouldShowAmountField(cover: Cover): boolean {
+    // If selectable is AMOUNT, show only if selected option is 'Yes'
+    if (cover.selectable === 'AMOUNT') {
+      return this.getCoverSelectedOption(cover.id) === 'Yes';
+    }
+    // For NO or RATE selectable, always show based on displayedAmountControlType
+    return true;
+  }
+
+  // Check if rate field should be shown
+  shouldShowRateField(cover: Cover): boolean {
+    // If selectable is RATE, show only if selected option is 'Yes'
+    if (cover.selectable === 'RATE') {
+      return this.getCoverSelectedOption(cover.id) === 'Yes';
+    }
+    // For NO or AMOUNT selectable, always show based on rateControlType
+    return true;
+  }
+
+  // Check if amount field is enabled
+  isAmountFieldEnabled(cover: Cover): boolean {
+    if (cover.selectable === 'AMOUNT') {
+      return this.getCoverSelectedOption(cover.id) === 'Yes';
+    }
+    return true;
+  }
+
+  // Check if rate field is enabled
+  isRateFieldEnabled(cover: Cover): boolean {
+    if (cover.selectable === 'RATE') {
+      return this.getCoverSelectedOption(cover.id) === 'Yes';
+    }
+    return true;
   }
 
   // Update canCalculatePremium to include covers
@@ -582,14 +645,15 @@ export class MotorQuotationFormComponent implements OnInit {
   }
   // Handle vehicle product selection change
   handleVehicleProductChange(productId: string) {
-    this.selectedVehicleProduct = productId;
     console.log('🚗 Vehicle product selected:', productId);
+    this.selectedVehicleProduct = productId;
+    this.premiumResult = null; // Reset premium result when product changes
+
      if (productId) {
        // Fetch adjustments when product is selected
       this.fetchAllActiveAdjustments();
-      // this.loadProductData();
-      // Fetch covers when product is selected
-      this.fetchAllActiveCovers();
+      // Fetch covers by product ID when product is selected
+      this.fetchCoversByProductId(productId);
     } else {
       this.adjustments = [];
       this.selectedAdjustmentValues = {};
@@ -834,6 +898,28 @@ export class MotorQuotationFormComponent implements OnInit {
     setTimeout(() => {
       this.cdr.detectChanges();
       console.log('🔄 Change detection triggered for covers');
+    });
+  }
+
+  // Fetch covers by product ID
+  fetchCoversByProductId(productId: string) {
+    console.log('📡 Fetching covers by product ID:', productId);
+    this.productService.getCoversByProductId(productId).subscribe({
+      next: (data: Cover[]) => {
+        console.log('✅ Covers API response:', data);
+        this.covers = data;
+        
+        // Initialize values after a small delay
+        setTimeout(() => {
+          console.log('⏰ Initializing cover values after timeout...');
+          this.initializeCoverValues();
+        }, 100);
+      },
+      error: (error) => {
+        console.error('❌ Error fetching covers:', error);
+        this.covers = [];
+        this.selectedCoverValues = {};
+      }
     });
   }
 

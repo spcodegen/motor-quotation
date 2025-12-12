@@ -62,7 +62,7 @@
         id="input" 
         [value]="sumInsured"
         (valueChange)="sumInsured"
-        [disabled]="true"
+        [disabled]="false"
       />
     </div>
     <div>
@@ -87,18 +87,18 @@
     </div>
     <!-- Adjustments Table - Updated to handle amount input -->
     <div class="mt-6" *ngIf="adjustments.length > 0">
-      <h3 class="text-lg font-semibold mb-4 dark:text-white">Adjustments</h3>
+      <h3 class="text-lg font-semibold mb-4 dark:text-white">Loading/Discounts</h3>
       <div class="overflow-x-auto">
-        <table class="min-w-full bg-white dark:bg-dark-800 border border-gray-300 dark:border-gray-600">
+        <table class="min-w-full dark:bg-dark-800 border border-gray-300 dark:border-gray-600">
           <thead>
-            <tr class="bg-gray-100 dark:bg-dark-700">
+            <tr class="bg-gray-50 dark:bg-gray-800">
               <th class="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-600">Name</th>
               <th class="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Value / Amount</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let adjustment of getSortedAdjustments()" 
-                class="border-t border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-dark-600">
+                class="border-t border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">
               <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-600">
                 <div class="font-medium">{{ adjustment.name }}</div>
                 <div class="text-xs text-gray-500 mt-1">
@@ -153,22 +153,23 @@
       </div>
     </div>
 
-    <!-- Covers Table - Updated to show empty for NOT_APPLICABLE -->
+    <!-- Covers Table - Updated with 5 columns including select option -->
     <div class="mt-8" *ngIf="covers.length > 0">
       <h3 class="text-lg font-semibold mb-4 dark:text-white">Covers</h3>
       <div class="overflow-x-auto">
-        <table class="min-w-full bg-white dark:bg-dark-800 border border-gray-300 dark:border-gray-600">
+        <table class="min-w-full dark:bg-dark-800 border border-gray-300 dark:border-gray-600">
           <thead>
-            <tr class="bg-gray-100 dark:bg-dark-700">
+            <tr class="bg-gray-50 dark:bg-gray-800">
               <th class="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-600">Name</th>
               <th class="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-600">Seat Count</th>
+              <th class="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-600">Select Option</th>
               <th class="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-600">Amount</th>
               <th class="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Rate</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let cover of getSortedCovers()" 
-                class="border-t border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-dark-600">
+                class="border-t border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">
               <!-- Name Column -->
               <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-600">
                 <div class="font-medium">{{ cover.name }}</div>
@@ -190,89 +191,131 @@
                 </div>
                 <div *ngIf="!cover.seatResponseList || cover.seatResponseList.length === 0" 
                      class="text-gray-400 dark:text-gray-500 text-sm">
-                  —
+                  
+                </div>
+              </td>
+
+              <!-- Select Option Column (NEW) -->
+              <td class="px-4 py-3 text-sm border-r border-gray-300 dark:border-gray-600">
+                <!-- Select option for RATE or AMOUNT type -->
+                <div *ngIf="cover.selectable === 'RATE' || cover.selectable === 'AMOUNT'">
+                  <app-select
+                    [options]="getSelectableOptions(cover.selectable)"
+                    placeholder="Select option"
+                    [value]="getCoverSelectedOption(cover.id)"
+                    (valueChange)="onCoverSelectOptionChange(cover.id, $event)"
+                    className="dark:bg-dark-900"
+                  ></app-select>
+                </div>
+                
+                <!-- Empty for NO selectable -->
+                <div *ngIf="cover.selectable === 'NO'" 
+                     class="text-gray-400 dark:text-gray-500 text-sm">
+                  
                 </div>
               </td>
 
               <!-- Amount Column -->
               <td class="px-4 py-3 text-sm border-r border-gray-300 dark:border-gray-600">
-                <!-- INPUT_FIELD for amount -->
-                <div *ngIf="cover.displayedAmountControlType === 'INPUT_FIELD'">
-                  <input
-                    type="number"
-                    [value]="getCoverAmount(cover.id)"
-                    (input)="onCoverAmountChange(cover.id, $event)"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-dark-900 dark:border-gray-600 dark:text-white"
-                    placeholder="Enter amount"
-                    step="0.01"
-                  />
-                  <!-- Show default amount if available -->
-                  <div *ngIf="cover.displayedAmountResponseList && cover.displayedAmountResponseList.length > 0" 
-                       class="text-xs text-gray-500 mt-1">
-                    Default: {{ getDefaultAmount(cover) | number }}
+                <!-- Show amount only if selectable is not AMOUNT or if selected option is 'Yes' -->
+                <div *ngIf="shouldShowAmountField(cover)">
+                  <!-- INPUT_FIELD for amount -->
+                  <div *ngIf="cover.displayedAmountControlType === 'INPUT_FIELD'">
+                    <input
+                      type="number"
+                      [value]="getCoverAmount(cover.id)"
+                      (input)="onCoverAmountChange(cover.id, $event)"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-dark-900 dark:border-gray-600 dark:text-white"
+                      placeholder="Enter amount"
+                      step="0.01"
+                      [disabled]="!isAmountFieldEnabled(cover)"
+                    />
+                    <!-- Show default amount if available -->
+                    <div *ngIf="cover.displayedAmountResponseList && cover.displayedAmountResponseList.length > 0" 
+                         class="text-xs text-gray-500 mt-1">
+                      Default: {{ getDefaultAmount(cover) | number }}
+                    </div>
+                  </div>
+
+                  <!-- DROPDOWN for amount -->
+                  <div *ngIf="cover.displayedAmountControlType === 'DROPDOWN' && cover.displayedAmountResponseList && cover.displayedAmountResponseList.length > 0">
+                    <app-select
+                      [options]="getAmountOptions(cover.displayedAmountResponseList)"
+                      placeholder="Select amount"
+                      [value]="getCoverAmount(cover.id).toString()"
+                      (valueChange)="onCoverAmountSelectChange(cover.id, $event)"
+                      className="dark:bg-dark-900"
+                      [disabled]="!isAmountFieldEnabled(cover)"
+                    ></app-select>
+                  </div>
+                  <div *ngIf="cover.displayedAmountControlType === 'DROPDOWN' && (!cover.displayedAmountResponseList || cover.displayedAmountResponseList.length === 0)" 
+                       class="text-gray-400 dark:text-gray-500 text-sm">
+                    
+                  </div>
+
+                  <!-- NOT_APPLICABLE for amount - Show empty -->
+                  <div *ngIf="cover.displayedAmountControlType === 'NOT_APPLICABLE'" 
+                       class="text-gray-400 dark:text-gray-500 text-sm">
+                    
                   </div>
                 </div>
-
-                <!-- DROPDOWN for amount -->
-                <div *ngIf="cover.displayedAmountControlType === 'DROPDOWN' && cover.displayedAmountResponseList && cover.displayedAmountResponseList.length > 0">
-                  <app-select
-                    [options]="getAmountOptions(cover.displayedAmountResponseList)"
-                    placeholder="Select amount"
-                    [value]="getCoverAmount(cover.id).toString()"
-                    (valueChange)="onCoverAmountSelectChange(cover.id, $event)"
-                    className="dark:bg-dark-900"
-                  ></app-select>
-                </div>
-                <div *ngIf="cover.displayedAmountControlType === 'DROPDOWN' && (!cover.displayedAmountResponseList || cover.displayedAmountResponseList.length === 0)" 
+                
+                <!-- Hide amount field if selectable is AMOUNT and option is 'No' -->
+                <div *ngIf="!shouldShowAmountField(cover)" 
                      class="text-gray-400 dark:text-gray-500 text-sm">
-                  —
-                </div>
-
-                <!-- NOT_APPLICABLE for amount - Show empty -->
-                <div *ngIf="cover.displayedAmountControlType === 'NOT_APPLICABLE'" 
-                     class="text-gray-400 dark:text-gray-500 text-sm">
-                  —
+                  
                 </div>
               </td>
 
               <!-- Rate Column -->
               <td class="px-4 py-3 text-sm">
-                <!-- INPUT_FIELD for rate -->
-                <div *ngIf="cover.rateControlType === 'INPUT_FIELD'">
-                  <input
-                    type="number"
-                    [value]="getCoverRate(cover.id)"
-                    (input)="onCoverRateChange(cover.id, $event)"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-dark-900 dark:border-gray-600 dark:text-white"
-                    placeholder="Enter rate %"
-                    step="0.01"
-                  />
-                  <!-- Show default rate if available -->
-                  <div *ngIf="cover.rateResponseList && cover.rateResponseList.length > 0" 
-                       class="text-xs text-gray-500 mt-1">
-                    Default: {{ getDefaultRate(cover) }}%
+                <!-- Show rate only if selectable is not RATE or if selected option is 'Yes' -->
+                <div *ngIf="shouldShowRateField(cover)">
+                  <!-- INPUT_FIELD for rate -->
+                  <div *ngIf="cover.rateControlType === 'INPUT_FIELD'">
+                    <input
+                      type="number"
+                      [value]="getCoverRate(cover.id)"
+                      (input)="onCoverRateChange(cover.id, $event)"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-dark-900 dark:border-gray-600 dark:text-white"
+                      placeholder="Enter rate %"
+                      step="0.01"
+                      [disabled]="!isRateFieldEnabled(cover)"
+                    />
+                    <!-- Show default rate if available -->
+                    <div *ngIf="cover.rateResponseList && cover.rateResponseList.length > 0" 
+                         class="text-xs text-gray-500 mt-1">
+                      Default: {{ getDefaultRate(cover) }}%
+                    </div>
+                  </div>
+
+                  <!-- DROPDOWN for rate -->
+                  <div *ngIf="cover.rateControlType === 'DROPDOWN' && cover.rateResponseList && cover.rateResponseList.length > 0">
+                    <app-select
+                      [options]="getRateOptions(cover.rateResponseList)"
+                      placeholder="Select rate"
+                      [value]="getCoverRate(cover.id).toString()"
+                      (valueChange)="onCoverRateSelectChange(cover.id, $event)"
+                      className="dark:bg-dark-900"
+                      [disabled]="!isRateFieldEnabled(cover)"
+                    ></app-select>
+                  </div>
+                  <div *ngIf="cover.rateControlType === 'DROPDOWN' && (!cover.rateResponseList || cover.rateResponseList.length === 0)" 
+                       class="text-gray-400 dark:text-gray-500 text-sm">
+                    
+                  </div>
+
+                  <!-- NOT_APPLICABLE for rate - Show empty -->
+                  <div *ngIf="cover.rateControlType === 'NOT_APPLICABLE'" 
+                       class="text-gray-400 dark:text-gray-500 text-sm">
+                    
                   </div>
                 </div>
-
-                <!-- DROPDOWN for rate -->
-                <div *ngIf="cover.rateControlType === 'DROPDOWN' && cover.rateResponseList && cover.rateResponseList.length > 0">
-                  <app-select
-                    [options]="getRateOptions(cover.rateResponseList)"
-                    placeholder="Select rate"
-                    [value]="getCoverRate(cover.id).toString()"
-                    (valueChange)="onCoverRateSelectChange(cover.id, $event)"
-                    className="dark:bg-dark-900"
-                  ></app-select>
-                </div>
-                <div *ngIf="cover.rateControlType === 'DROPDOWN' && (!cover.rateResponseList || cover.rateResponseList.length === 0)" 
+                
+                <!-- Hide rate field if selectable is RATE and option is 'No' -->
+                <div *ngIf="!shouldShowRateField(cover)" 
                      class="text-gray-400 dark:text-gray-500 text-sm">
-                  —
-                </div>
-
-                <!-- NOT_APPLICABLE for rate - Show empty -->
-                <div *ngIf="cover.rateControlType === 'NOT_APPLICABLE'" 
-                     class="text-gray-400 dark:text-gray-500 text-sm">
-                  —
+                  
                 </div>
               </td>
             </tr>
@@ -280,6 +323,7 @@
         </table>
       </div>
     </div>
+
 
     <!-- Calculate Button and Premium Results -->
     <div class="flex flex-col md:flex-row gap-4 items-end mt-6">
